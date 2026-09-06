@@ -1,17 +1,60 @@
+/* =========================================================================
+   DISPATCH — a CV builder
+   Design direction: a correspondence desk, not a SaaS dashboard. The app
+   chrome is deliberately dark (an "ink" workspace) so the one thing that
+   must stay print-true — the white resume page itself — reads like an
+   actual sheet of paper resting under a desk lamp, not just another panel
+   in a row of identical cards. Small pale "index card" fields carry the
+   same paper idea into the editor at a smaller scale. Brass is the one
+   accent color that means "action"; the muted stamp-red is reserved
+   strictly for the AI-assist affordance, so it never competes with brass.
+   ========================================================================= */
+
 :root {
-  --ink: #17181c;
-  --ink-soft: #5b6472;
-  --paper: #f7f6f3;
-  --panel: #ffffff;
-  --line: #dfe0e2;
-  --navy: #1f3a5f;
-  --navy-hover: #16283f;
-  --warn-bg: #fbeee0;
-  --warn-text: #8a4b12;
-  --ok: #2f6f4e;
-  --danger: #9b2c2c;
-  --radius: 6px;
+  /* Chrome (app UI, never exported/printed) */
+  --ink-950: #14171c;
+  --ink-900: #1b1f26;
+  --ink-850: #1e232b;
+  --ink-800: #242a33;
+  --ink-700: #2d3440;
+  --line-dark: rgba(237, 233, 221, 0.1);
+  --line-dark-strong: rgba(237, 233, 221, 0.18);
+  --mist: #a7aeb9;
+  --mist-dim: #767e8a;
+  --mist-bright: #ece7da;
+
+  /* Paper (index-card fields — a smaller echo of the resume page) */
+  --paper-card: #f2efe6;
+  --paper-card-text: #211e19;
+  --paper-card-border: rgba(20, 18, 12, 0.14);
+
+  /* The resume document itself — must stay print-true regardless of theme */
+  --paper: #ffffff;
+  --ink-doc: #17181c;
+
+  /* Accents */
+  --brass: #c9a227;
+  --brass-bright: #e2bf52;
+  --brass-dim: #8a6f22;
+  --stamp: #b3453f;
+  --stamp-bright: #d1655f;
+  --ok: #5fa87d;
+  --warn-bg: #3a2e18;
+  --warn-text: #e8b565;
+  --ok-bg: #163326;
+  --danger: #e0716c;
+
+  --radius-sm: 4px;
+  --radius-md: 10px;
+  --radius-pill: 999px;
+
+  --font-display: Georgia, "Times New Roman", serif;
   --font-ui: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-mono: "Courier New", Courier, monospace;
+
+  --shadow-paper: 0 30px 70px -18px rgba(0, 0, 0, 0.6), 0 6px 16px rgba(0, 0, 0, 0.35);
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.3);
+  --shadow-sheet: 0 -10px 34px rgba(0, 0, 0, 0.5);
 }
 
 * { box-sizing: border-box; }
@@ -19,8 +62,8 @@
 html, body {
   margin: 0;
   height: 100%;
-  background: var(--paper);
-  color: var(--ink);
+  background: var(--ink-950);
+  color: var(--mist-bright);
   font-family: var(--font-ui);
 }
 
@@ -34,90 +77,192 @@ button {
   cursor: pointer;
 }
 
-/* ---------- Top bar ---------- */
+a { color: var(--brass-bright); }
+
+:focus-visible {
+  outline: 2px solid var(--brass-bright);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; transition-duration: 0.001ms !important; }
+}
+
+/* ---------- Dispatch mascot (paper-plane, folded-paper silhouette) ---------- */
+
+.dispatch {
+  display: inline-block;
+  width: 26px;
+  height: 16px;
+  flex-shrink: 0;
+}
+.dispatch svg { width: 100%; height: 100%; display: block; overflow: visible; }
+.dispatch .wing-light { fill: var(--brass-bright); }
+.dispatch .wing-dark { fill: var(--brass-dim); }
+.dispatch .tailfin { fill: var(--brass); }
+
+@keyframes dispatch-idle-bob {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(-2px) rotate(-4deg); }
+}
+.dispatch--idle svg { animation: dispatch-idle-bob 3.4s ease-in-out infinite; }
+
+@keyframes dispatch-flutter {
+  0%, 100% { transform: rotate(-9deg); }
+  50% { transform: rotate(9deg); }
+}
+.dispatch--thinking svg { animation: dispatch-flutter 0.45s ease-in-out infinite; }
+
+@keyframes dispatch-fly {
+  0% { transform: translate(0, 0) rotate(0deg) scale(1); opacity: 1; }
+  65% { transform: translate(34px, -60px) rotate(16deg) scale(1.2); opacity: 1; }
+  100% { transform: translate(80px, -150px) rotate(20deg) scale(0.7); opacity: 0; }
+}
+.dispatch--flying svg { animation: dispatch-fly 0.9s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
+
+/* ---------- Top bar (desktop) ---------- */
 
 .topbar {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 10px 16px;
-  background: var(--panel);
-  border-bottom: 1px solid var(--line);
+  gap: 14px;
+  padding: 12px 18px;
+  background: var(--ink-900);
+  border-bottom: 1px solid var(--line-dark);
   position: sticky;
   top: 0;
   z-index: 20;
 }
 
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-right: 10px;
+}
+
 .topbar h1 {
-  font-size: 16px;
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 19px;
+  font-weight: 700;
   margin: 0;
-  font-weight: 600;
-  margin-right: auto;
-}
-
-.btn {
-  border: 1px solid var(--line);
-  background: var(--panel);
-  color: var(--ink);
-  padding: 7px 12px;
-  border-radius: var(--radius);
-  font-size: 13px;
-  line-height: 1.2;
-}
-
-.btn:hover { background: #f1f1ef; }
-
-.btn-primary {
-  background: var(--navy);
-  border-color: var(--navy);
-  color: #fff;
-}
-
-.btn-primary:hover { background: var(--navy-hover); }
-
-.btn-icon {
-  padding: 6px 8px;
-  font-size: 13px;
+  color: var(--mist-bright);
+  letter-spacing: 0.2px;
 }
 
 .status {
   font-size: 12px;
-  color: var(--ink-soft);
+  color: var(--mist-dim);
   white-space: nowrap;
+  margin-right: auto;
 }
+
+.status.mono { font-family: var(--font-mono); }
+
+.topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.btn {
+  border: 1px solid var(--line-dark-strong);
+  background: var(--ink-800);
+  color: var(--mist-bright);
+  padding: 8px 13px;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  line-height: 1.2;
+}
+
+.btn:hover { background: var(--ink-700); border-color: var(--mist-dim); }
+
+.btn-primary {
+  background: var(--brass);
+  border-color: var(--brass);
+  color: #201a05;
+  font-weight: 600;
+}
+
+.btn-primary:hover { background: var(--brass-bright); }
+
+.btn.icon-only {
+  width: 34px;
+  padding: 0;
+  font-size: 15px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Hidden on desktop, where the gear stays a compact icon-only button to
+   save space in a toolbar that already holds six actions. Revealed on
+   mobile (below) where it sits full-width in the "more" sheet with room
+   to spare - a bare unlabeled gear glyph there is too easy to miss. */
+.btn-label { display: none; }
 
 /* ---------- Layout ---------- */
 
 .workspace {
   flex: 1;
   display: grid;
-  grid-template-columns: minmax(320px, 480px) 1fr;
+  grid-template-columns: minmax(340px, 480px) 1fr;
   min-height: 0;
 }
 
 .editor {
   overflow-y: auto;
-  padding: 20px 20px 80px;
-  border-right: 1px solid var(--line);
+  padding: 22px 22px 90px;
+  background: var(--ink-900);
+  border-right: 1px solid var(--line-dark);
 }
 
 .preview-pane {
   overflow-y: auto;
-  padding: 32px;
+  padding: 44px;
   display: flex;
   justify-content: center;
   align-items: flex-start;
-  background: #ece9e3;
+  background:
+    radial-gradient(ellipse at top, rgba(255,255,255,0.03), transparent 60%),
+    var(--ink-950);
 }
 
 @media (max-width: 860px) {
   .workspace { grid-template-columns: 1fr; }
   .editor, .preview-pane { display: none; }
   .editor.active, .preview-pane.active { display: block; }
-  .mobile-tabs { display: flex; }
-  .preview-pane { padding: 16px 0; }
-  .topbar { overflow-x: auto; flex-wrap: nowrap; }
-  .topbar .btn, .topbar h1 { flex-shrink: 0; }
+  .preview-pane { padding: 14px 0 110px; }
+  .editor { padding-bottom: 130px; }
+
+  .topbar {
+    position: fixed;
+    left: 0; right: 0; bottom: 0;
+    top: auto;
+    z-index: 60;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+    padding: 16px 16px calc(16px + env(safe-area-inset-bottom));
+    border-top-left-radius: 18px;
+    border-top-right-radius: 18px;
+    border-bottom: none;
+    box-shadow: var(--shadow-sheet);
+    transform: translateY(110%);
+    transition: transform 0.3s ease;
+  }
+  .topbar.sheet-open { transform: translateY(0); }
+  .topbar .brand, .topbar > .status { display: none; }
+  .topbar-actions { flex-wrap: wrap; }
+  .topbar-actions .btn { flex: 1 1 45%; text-align: center; }
+  .topbar-actions .btn.icon-only {
+    flex: 1 1 45%;
+    width: auto;
+    gap: 4px;
+    font-size: 13px;
+  }
+  .topbar-actions .btn.icon-only .btn-label { display: inline; }
 }
 
 /* Shrinks the fixed-width 816px page to fit narrow viewports without
@@ -133,34 +278,183 @@ button {
   margin: 0 auto;
 }
 
-.mobile-tabs {
+/* ---------- Mobile pill (Edit / Preview toggle + more actions) ---------- */
+
+.mobile-pill {
   display: none;
-  border-bottom: 1px solid var(--line);
-  background: var(--panel);
+  position: fixed;
+  left: 50%;
+  bottom: calc(18px + env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  z-index: 45;
+  align-items: center;
+  gap: 6px;
+  background: var(--ink-900);
+  border: 1px solid var(--line-dark-strong);
+  border-radius: var(--radius-pill);
+  padding: 4px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
 }
 
-.mobile-tabs button {
+@media (max-width: 860px) {
+  .mobile-pill { display: flex; }
+}
+
+.pill-toggle {
+  position: relative;
+  display: flex;
+  width: 168px;
+}
+
+.pill-thumb {
+  position: absolute;
+  top: 2px; bottom: 2px; left: 2px;
+  width: calc(50% - 4px);
+  border-radius: var(--radius-pill);
+  background: var(--brass);
+  transition: transform 0.35s cubic-bezier(0.34, 1.2, 0.4, 1);
+}
+
+.pill-toggle.preview .pill-thumb { transform: translateX(100%); }
+
+/* Dispatch's own badge, deliberately outside the sliding thumb - riding
+   alongside the Edit/Preview toggle rather than inside it, so his icon
+   never sits underneath (and fights with) the segment label text.
+   overflow stays visible (no clipping) so the "flying" export animation
+   can escape upward past the badge's circular bounds. */
+.dispatch-badge {
+  flex-shrink: 0;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--ink-800);
+  border: 1px solid var(--line-dark-strong);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: visible;
+}
+
+.pill-seg {
+  position: relative;
+  z-index: 2;
   flex: 1;
-  padding: 10px;
   border: none;
   background: none;
+  padding: 9px 0;
   font-size: 13px;
-  color: var(--ink-soft);
-  border-bottom: 2px solid transparent;
+  font-weight: 600;
+  color: var(--mist);
+  border-radius: var(--radius-pill);
 }
 
-.mobile-tabs button.active {
-  color: var(--navy);
-  border-bottom-color: var(--navy);
-  font-weight: 600;
+.pill-seg.active { color: #201a05; }
+
+.pill-more {
+  border: none;
+  background: none;
+  color: var(--mist);
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  font-size: 15px;
+  letter-spacing: 1px;
 }
+
+.pill-more:hover, .pill-more:active { background: var(--ink-700); color: var(--mist-bright); }
+
+.sheet-backdrop, .drawer-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+  z-index: 40;
+}
+.sheet-backdrop.open, .drawer-backdrop.open { opacity: 1; pointer-events: auto; }
+/* Sits just under the settings drawer (65) but above the mobile
+   topbar-as-sheet (60), for the same reason as the drawer itself. */
+.drawer-backdrop { z-index: 63; }
+
+/* ---------- Settings drawer (AI Assist / Groq key) ---------- */
+
+.settings-drawer {
+  position: fixed;
+  top: 0; right: 0;
+  height: 100%;
+  width: min(380px, 92vw);
+  background: var(--ink-900);
+  border-left: 1px solid var(--line-dark);
+  padding: 26px;
+  overflow-y: auto;
+  z-index: 65; /* above the mobile topbar-as-sheet (z-index 60), so opening
+                  Settings from the "more" sheet never gets briefly hidden
+                  behind it while that sheet is still sliding away */
+  transform: translateX(100%);
+  transition: transform 0.3s ease;
+}
+.settings-drawer.open { transform: translateX(0); }
+
+.settings-drawer h2 {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 21px;
+  margin: 0 0 6px;
+  color: var(--mist-bright);
+}
+
+.settings-drawer p {
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--mist);
+}
+
+.settings-drawer label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  margin: 18px 0 6px;
+  color: var(--mist-bright);
+}
+
+.settings-drawer input[type="password"],
+.settings-drawer input[type="text"] {
+  width: 100%;
+  padding: 9px 10px;
+  border: 1px solid var(--paper-card-border);
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  font-family: var(--font-mono);
+  background: var(--paper-card);
+  color: var(--paper-card-text);
+}
+
+.drawer-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.drawer-note {
+  margin-top: 18px;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--ink-800);
+  border: 1px solid var(--line-dark);
+  font-size: 11.5px;
+  color: var(--mist-dim);
+  line-height: 1.5;
+}
+
+.btn-close-drawer { margin-top: 22px; width: 100%; }
 
 /* ---------- Editor sections ---------- */
 
 .section-card {
-  background: var(--panel);
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
+  background: var(--ink-800);
+  border: 1px solid var(--line-dark);
+  border-radius: var(--radius-md);
   margin-bottom: 14px;
 }
 
@@ -168,56 +462,67 @@ button {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 12px 14px;
-  border-bottom: 1px solid var(--line);
+  padding: 13px 15px;
+  border-bottom: 1px solid var(--line-dark);
 }
 
 .section-head h2 {
-  font-size: 14px;
+  font-size: 13.5px;
   margin: 0;
   margin-right: auto;
-  font-weight: 600;
+  font-weight: 700;
+  color: var(--mist-bright);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
 }
 
 .section-body {
-  padding: 14px;
+  padding: 15px;
 }
 
 .field {
-  margin-bottom: 12px;
+  margin-bottom: 13px;
 }
 
 .field label {
   display: block;
   font-size: 12px;
   font-weight: 600;
-  margin-bottom: 4px;
-  color: var(--ink);
+  margin-bottom: 5px;
+  color: var(--mist-bright);
 }
 
 .field .hint {
   font-size: 11.5px;
-  color: var(--ink-soft);
-  margin-top: 3px;
-  line-height: 1.4;
+  color: var(--mist-dim);
+  margin-top: 4px;
+  line-height: 1.45;
 }
 
+/* Index-card fields: a small echo of the resume page itself sitting on
+   the dark desk, so the "paper" idea shows up at editor scale too, not
+   just in the big preview. */
 .field input[type="text"],
 .field input[type="email"],
 .field input[type="tel"],
 .field textarea,
 .field select {
   width: 100%;
-  padding: 7px 9px;
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
+  padding: 8px 10px;
+  border: 1px solid var(--paper-card-border);
+  border-radius: var(--radius-sm);
   font-size: 13px;
   font-family: inherit;
-  background: #fff;
-  color: var(--ink);
+  background: var(--paper-card);
+  color: var(--paper-card-text);
+  box-shadow: var(--shadow-card);
 }
 
-.field textarea { resize: vertical; min-height: 56px; }
+.field input:focus, .field textarea:focus, .field select:focus {
+  border-color: var(--brass);
+}
+
+.field textarea { resize: vertical; min-height: 58px; }
 
 .two-col {
   display: grid;
@@ -226,19 +531,21 @@ button {
 }
 
 .entry {
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  padding: 12px;
+  border: 1px solid var(--line-dark);
+  border-radius: var(--radius-md);
+  padding: 13px;
   margin-bottom: 10px;
-  background: #fcfcfb;
+  background: var(--ink-850);
 }
 
 .entry-head {
   display: flex;
   gap: 6px;
   align-items: center;
-  margin-bottom: 8px;
+  margin-bottom: 9px;
 }
+
+.entry-head strong { color: var(--mist); font-weight: 600; }
 
 .entry-head .spacer { flex: 1; }
 
@@ -258,55 +565,73 @@ button {
 }
 
 .icon-btn {
-  border: 1px solid var(--line);
-  background: #fff;
+  border: 1px solid var(--line-dark-strong);
+  background: var(--ink-800);
   border-radius: 4px;
-  width: 26px;
-  height: 26px;
+  width: 27px;
+  height: 27px;
   font-size: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--ink-soft);
+  color: var(--mist);
 }
 
-.icon-btn:hover { background: #f1f1ef; color: var(--ink); }
+.icon-btn:hover { background: var(--ink-700); color: var(--mist-bright); }
 
-.icon-btn.danger:hover { background: #fbeaea; color: var(--danger); }
+.icon-btn.danger:hover { background: #3a1f1d; color: var(--danger); border-color: var(--danger); }
 
 .add-btn {
   font-size: 12.5px;
-  border: 1px dashed var(--line);
+  border: 1px dashed var(--line-dark-strong);
   background: none;
-  padding: 8px;
+  padding: 9px;
   width: 100%;
-  border-radius: var(--radius);
-  color: var(--ink-soft);
+  border-radius: var(--radius-sm);
+  color: var(--mist-dim);
 }
 
-.add-btn:hover { border-color: var(--navy); color: var(--navy); }
+.add-btn:hover { border-color: var(--brass); color: var(--brass-bright); }
 
 .suggest-btn {
   font-size: 11.5px;
-  border: 1px solid var(--line);
-  background: #fff;
-  padding: 4px 8px;
+  border: 1px solid var(--line-dark-strong);
+  background: var(--ink-800);
+  padding: 5px 9px;
   border-radius: 4px;
-  color: var(--navy);
+  color: var(--mist);
   white-space: nowrap;
 }
 
-.suggest-btn:hover { background: #eef2f6; }
+.suggest-btn:hover { background: var(--ink-700); }
+
+/* AI-assist button - visually distinct from the free/offline template
+   suggester above it: a thin brass border signals "this one reaches
+   out to Groq," which is a real, honest difference the person should
+   be able to see at a glance, not just discover after clicking. */
+.ai-btn {
+  font-size: 11.5px;
+  border: 1px solid var(--brass-dim);
+  background: var(--ink-800);
+  padding: 5px 9px;
+  border-radius: 4px;
+  color: var(--brass-bright);
+  white-space: nowrap;
+}
+
+.ai-btn:hover { background: #2b2415; border-color: var(--brass); }
+
+.ai-btn:disabled { opacity: 0.55; cursor: wait; }
 
 .toggle {
   display: inline-flex;
   align-items: center;
   gap: 6px;
   font-size: 12px;
-  color: var(--ink-soft);
+  color: var(--mist);
 }
 
-.toggle input { accent-color: var(--navy); }
+.toggle input { accent-color: var(--brass); }
 
 /* ---------- Style controls ---------- */
 
@@ -330,30 +655,34 @@ button {
   cursor: pointer;
 }
 
-.swatch.selected { border-color: var(--ink); }
+.swatch.selected { border-color: var(--brass-bright); }
 
 /* ---------- Validation banner ---------- */
 
 .banner {
   font-size: 12.5px;
-  padding: 8px 12px;
-  border-radius: var(--radius);
+  padding: 9px 13px;
+  border-radius: var(--radius-sm);
   margin-bottom: 12px;
 }
 
 .banner.warn { background: var(--warn-bg); color: var(--warn-text); }
-.banner.ok { background: #e7f3ec; color: var(--ok); }
+.banner.ok { background: var(--ok-bg); color: var(--ok); }
 
-/* ---------- Resume preview (paper) ---------- */
+/* ---------- Resume preview (paper) ----------
+   Deliberately untouched by the app's dark theme above: this is the
+   actual document a person will download and send to an employer, so
+   it stays a plain, print-true white page regardless of how the chrome
+   around it looks. */
 
 .page {
   position: relative;
-  background: #ffffff;
+  background: var(--paper);
   width: 816px;
   min-height: 1056px;
   padding: 56px 60px;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.15);
-  color: #111;
+  box-shadow: var(--shadow-paper);
+  color: var(--ink-doc);
 }
 
 .page[data-font="calibri"] { font-family: Calibri, "Segoe UI", sans-serif; }
@@ -421,10 +750,13 @@ button {
 .rp-bullets li { margin-bottom: 2px; line-height: 1.4; }
 
 /* Two-column layout via flexbox rather than CSS `columns` - html2canvas
-   (used for PDF export) has long-standing bugs rendering multi-column
-   layouts. Note: flex/grid items get "blockified" per spec, which drops
-   the native `::marker` bullet on <li> in every browser - so list-style
-   is disabled here and the bullet is drawn back in manually. */
+   used to power PDF export, so multi-column CSS was a real rendering
+   risk; PDF export is now text-based (jsPDF) so that specific risk is
+   gone, but this flex layout also just renders more predictably than
+   CSS `columns` in general, so it stays. Flex/grid items get
+   "blockified" per spec, which drops the native `::marker` bullet on
+   <li> in every browser - so list-style is disabled and the bullet is
+   drawn back in manually. */
 .rp-flatlist {
   margin: 0;
   padding-left: 0;
@@ -478,15 +810,21 @@ button {
 
 footer.app-footer {
   font-size: 11px;
-  color: var(--ink-soft);
+  color: var(--mist-dim);
   text-align: center;
-  padding: 8px;
+  padding: 9px;
+  background: var(--ink-950);
+}
+
+@media (max-width: 860px) {
+  footer.app-footer { display: none; } /* redundant with the drawer's own privacy note on mobile */
 }
 
 /* If someone hits Ctrl+P instead of "Download PDF", print just the resume
-   page, not the toolbar/editor/tabs around it. */
+   page, not the toolbar/editor/pill around it. */
 @media print {
-  .topbar, .mobile-tabs, .editor, footer.app-footer { display: none !important; }
+  .topbar, .mobile-pill, .sheet-backdrop, .drawer-backdrop, .settings-drawer,
+  .editor, footer.app-footer { display: none !important; }
   .workspace, .preview-pane { display: block !important; padding: 0 !important; background: #fff !important; }
   .page-scale-wrap { height: auto !important; width: auto !important; }
   .page {

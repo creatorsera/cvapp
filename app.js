@@ -370,6 +370,11 @@ function bulletEditor(bullets, onChange, hintText) {
       class: "suggest-btn", type: "button", title: "Insert a suggestion",
       onclick: () => { ta.value = suggestBulletText(); bullets[i] = ta.value; onChange(); }
     }, ["\ud83d\udca1"]));
+    const aiBtn = el("button", {
+      class: "ai-btn", type: "button", title: "Rewrite with AI Assist (sends this line to Groq)",
+      onclick: () => aiRewriteBullet(aiBtn, ta, bullets, i, onChange)
+    }, ["\u2728"]);
+    rightControls.appendChild(aiBtn);
     rightControls.appendChild(iconBtn("\u00d7", "Remove bullet", () => {
       bullets.splice(i, 1);
       if (bullets.length === 0) bullets.push("");
@@ -950,6 +955,7 @@ function exportPdf() {
   const filename = (state.header.name || "resume").trim().replace(/\s+/g, "_") + ".pdf";
   try {
     const doc = buildTextPdf();
+    setDispatchState("flying");
     doc.save(filename);
   } catch (err) {
     console.error(err);
@@ -1096,6 +1102,7 @@ function exportDocx() {
   }
   const doc = buildDocxDocument();
   const filename = (state.header.name || "resume").trim().replace(/\s+/g, "_") + ".docx";
+  setDispatchState("flying");
   window.docx.Packer.toBlob(doc).then((blob) => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -1152,8 +1159,115 @@ function importJsonBackup(file) {
 }
 
 /* =========================================================================
-   TOP-LEVEL CONTROLS
+   DISPATCH MASCOT STATES
+   Toggled on every .dispatch element at once (there's one in the desktop
+   topbar and one riding the mobile pill) so both stay in sync.
    ========================================================================= */
+
+function setDispatchState(mode) {
+  document.querySelectorAll(".dispatch").forEach((d) => {
+    d.classList.remove("dispatch--idle", "dispatch--thinking", "dispatch--flying");
+    d.classList.add("dispatch--" + mode);
+  });
+  if (mode === "flying") {
+    // CSS animation is 0.9s; settle back to idle just after it finishes
+    // rather than staying mid-flight forever.
+    setTimeout(() => setDispatchState("idle"), 1000);
+  }
+}
+
+/* =========================================================================
+   AI ASSIST (Groq)
+   Bring-your-own-key, called directly from the browser with your own free
+   Groq API key - there's no server here to hold a shared key safely, so
+   asking each person for their own key is the honest option rather than
+   shipping a key that anyone could pull out of this page's network tab.
+   The key lives in its own localStorage entry, separate from the CV
+   draft, so it can never end up inside an exported Backup .json file.
+   ========================================================================= */
+
+const GROQ_KEY_STORAGE = "cvbuilder.groqKey.v1";
+const GROQ_MODEL = "llama-3.1-8b-instant";
+
+function getGroqKey() {
+  try { return localStorage.getItem(GROQ_KEY_STORAGE) || ""; }
+  catch (e) { return ""; }
+}
+function setGroqKey(key) {
+  try {
+    if (key) localStorage.setItem(GROQ_KEY_STORAGE, key);
+    else localStorage.removeItem(GROQ_KEY_STORAGE);
+  } catch (e) { /* storage unavailable - AI Assist just won't persist the key */ }
+}
+
+// Sends only `userText` (one bullet's worth), never the rest of the CV.
+function callGroq(systemPrompt, userText) {
+  const key = getGroqKey();
+  if (!key) return Promise.reject(new Error("NO_KEY"));
+
+  return fetch("https://api.groq.com/openai/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": "Bearer " + key
+    },
+    body: JSON.stringify({
+      model: GROQ_MODEL,
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userText }
+      ],
+      temperature: 0.4,
+      max_tokens: 140
+    })
+  }).then((res) => {
+    if (!res.ok) {
+      if (res.status === 401) throw new Error("Your Groq API key looks invalid. Check it in the AI Assist settings.");
+      if (res.status === 429) throw new Error("Groq's free-tier rate limit was just hit. Wait a bit and try again.");
+      throw new Error("Groq request failed (status " + res.status + ").");
+    }
+    return res.json();
+  }).then((data) => {
+    const text = data && data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content;
+    if (!text) throw new Error("Groq returned an empty response.");
+    return text.trim().replace(/^["\u201c]|["\u201d]$/g, "");
+  });
+}
+
+const BULLET_REWRITE_PROMPT =
+  "You rewrite a single resume bullet point. Return ONLY the rewritten " +
+  "bullet text, as one line, with no quotes, no bullet character, and no " +
+  "extra commentary. Start with a strong action verb. Keep it concise " +
+  "(under 25 words). Do not invent any numbers, employers, or facts that " +
+  "are not implied by the input text.";
+
+function aiRewriteBullet(button, textarea, bullets, i, onChange) {
+  const currentText = (bullets[i] || "").trim();
+  if (!getGroqKey()) {
+    openSettingsDrawer();
+    return;
+  }
+  if (!currentText) {
+    alert("Type a rough draft of this bullet first, then click \u2728 to have AI Assist polish it.");
+    return;
+  }
+  button.disabled = true;
+  setDispatchState("thinking");
+  callGroq(BULLET_REWRITE_PROMPT, currentText)
+    .then((rewritten) => {
+      textarea.value = rewritten;
+      bullets[i] = rewritten;
+      onChange();
+    })
+    .catch((err) => {
+      console.error(err);
+      alert(err && err.message ? err.message : "AI Assist could not rewrite that bullet.");
+    })
+    .finally(() => {
+      button.disabled = false;
+      setDispatchState("idle");
+    });
+}
 
 function wireTopbar() {
   document.getElementById("btnNew").addEventListener("click", () => {
@@ -1174,20 +1288,84 @@ function wireTopbar() {
   });
 }
 
-function wireMobileTabs() {
-  const editTab = document.getElementById("tabEdit");
-  const previewTab = document.getElementById("tabPreview");
+function wireMobilePill() {
+  const toggle = document.getElementById("pillToggle");
+  const segEdit = document.getElementById("segEdit");
+  const segPreview = document.getElementById("segPreview");
   const editorPane = document.getElementById("editor");
   const previewPane = document.getElementById("previewPane");
+
   function show(which) {
-    editTab.classList.toggle("active", which === "edit");
-    previewTab.classList.toggle("active", which === "preview");
+    toggle.classList.toggle("preview", which === "preview");
+    segEdit.classList.toggle("active", which === "edit");
+    segPreview.classList.toggle("active", which === "preview");
+    segEdit.setAttribute("aria-pressed", String(which === "edit"));
+    segPreview.setAttribute("aria-pressed", String(which === "preview"));
     editorPane.classList.toggle("active", which === "edit");
     previewPane.classList.toggle("active", which === "preview");
+    if (which === "preview") updatePageScale();
   }
-  editTab.addEventListener("click", () => show("edit"));
-  previewTab.addEventListener("click", () => { show("preview"); updatePageScale(); });
+  segEdit.addEventListener("click", () => show("edit"));
+  segPreview.addEventListener("click", () => show("preview"));
   show("edit");
+}
+
+// Mobile: the desktop topbar doubles as a bottom "more actions" sheet,
+// so New / Backup / Restore / Settings / Export don't need duplicate
+// buttons and duplicate wiring - it's the same elements, repositioned.
+function wireMoreSheet() {
+  const topbar = document.getElementById("topbar");
+  const backdrop = document.getElementById("sheetBackdrop");
+  const btnMore = document.getElementById("btnMore");
+  if (!btnMore) return;
+
+  function closeSheet() {
+    topbar.classList.remove("sheet-open");
+    backdrop.classList.remove("open");
+  }
+  function openSheet() {
+    topbar.classList.add("sheet-open");
+    backdrop.classList.add("open");
+  }
+  btnMore.addEventListener("click", () => {
+    topbar.classList.contains("sheet-open") ? closeSheet() : openSheet();
+  });
+  backdrop.addEventListener("click", closeSheet);
+  // Any action in the sheet closes it afterward, so it doesn't sit open
+  // over whatever just happened (a download, a new blank draft, etc).
+  document.querySelectorAll(".topbar-actions .btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      if (window.innerWidth <= 860) closeSheet();
+    });
+  });
+}
+
+function openSettingsDrawer() {
+  document.getElementById("settingsDrawer").classList.add("open");
+  document.getElementById("settingsDrawer").setAttribute("aria-hidden", "false");
+  document.getElementById("drawerBackdrop").classList.add("open");
+  const input = document.getElementById("groqKeyInput");
+  input.value = getGroqKey();
+}
+function closeSettingsDrawer() {
+  document.getElementById("settingsDrawer").classList.remove("open");
+  document.getElementById("settingsDrawer").setAttribute("aria-hidden", "true");
+  document.getElementById("drawerBackdrop").classList.remove("open");
+}
+
+function wireSettingsDrawer() {
+  document.getElementById("btnSettings").addEventListener("click", openSettingsDrawer);
+  document.getElementById("btnCloseDrawer").addEventListener("click", closeSettingsDrawer);
+  document.getElementById("drawerBackdrop").addEventListener("click", closeSettingsDrawer);
+  document.getElementById("btnSaveKey").addEventListener("click", () => {
+    const val = document.getElementById("groqKeyInput").value.trim();
+    setGroqKey(val);
+    closeSettingsDrawer();
+  });
+  document.getElementById("btnClearKey").addEventListener("click", () => {
+    setGroqKey("");
+    document.getElementById("groqKeyInput").value = "";
+  });
 }
 
 function registerServiceWorker() {
@@ -1206,7 +1384,9 @@ function registerServiceWorker() {
 
 function init() {
   wireTopbar();
-  wireMobileTabs();
+  wireMobilePill();
+  wireMoreSheet();
+  wireSettingsDrawer();
   renderEditor();
   renderPreview();
   registerServiceWorker();

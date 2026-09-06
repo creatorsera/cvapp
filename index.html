@@ -3,18 +3,22 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<title>CV Builder</title>
+<title>Dispatch – CV Builder</title>
 
 <!--
   Security notes:
-  - Everything runs client-side. No form data is ever sent to a server —
-    your CV content never leaves this device except into the PDF/DOCX
-    files you export yourself.
-  - The only network requests this app makes are to load the two export
-    libraries below (jsPDF, docx.js) from their CDNs on first use.
-    After that, the service worker caches them for offline use.
+  - Everything runs client-side. No form data is ever sent to a server.
+    Your CV content never leaves this device except into the PDF/DOCX
+    files you export yourself, or the one field's text you explicitly
+    send to Groq via the AI Assist button, only if you've opted in with
+    your own API key (see the Settings drawer).
+  - The only network requests this app makes: the two export libraries
+    below (jsPDF, docx.js) on first use, cached offline afterward; and,
+    only if you use AI Assist, a request per click to api.groq.com
+    carrying that one field's text plus your own API key.
   - Content-Security-Policy below restricts scripts to this app's own
-    origin plus those two named CDNs — no inline scripts, no eval.
+    origin plus those two named CDNs, and network requests (connect-src)
+    to this app's origin plus Groq's API. No inline scripts, no eval.
 -->
 <meta http-equiv="Content-Security-Policy" content="
   default-src 'self';
@@ -22,7 +26,7 @@
   style-src 'self' 'unsafe-inline';
   img-src 'self' data:;
   font-src 'self';
-  connect-src 'self';
+  connect-src 'self' https://api.groq.com;
   object-src 'none';
   base-uri 'self';
   form-action 'none';
@@ -32,30 +36,38 @@
 <link rel="manifest" href="manifest.json" />
 <link rel="icon" href="icons/icon-192.png" />
 <link rel="apple-touch-icon" href="icons/icon-192.png" />
-<meta name="theme-color" content="#1F3A5F" />
+<meta name="theme-color" content="#14171c" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
-<meta name="apple-mobile-web-app-status-bar-style" content="default" />
-<meta name="apple-mobile-web-app-title" content="CV Builder" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="Dispatch" />
 <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
 
-<div class="topbar">
-  <h1>CV Builder</h1>
-  <span class="status" id="status">Loading\u2026</span>
-  <span class="status" id="pageEstimate"></span>
-  <button class="btn" id="btnNew" type="button">New</button>
-  <button class="btn" id="btnBackup" type="button" title="Save a .json backup of everything you've typed">Backup</button>
-  <button class="btn" id="btnRestore" type="button" title="Restore from a previously saved .json backup">Restore</button>
-  <input type="file" id="fileRestore" accept="application/json" style="display:none" />
-  <button class="btn" id="btnPdf" type="button">Download PDF</button>
-  <button class="btn btn-primary" id="btnDocx" type="button">Download Word</button>
+<div class="topbar" id="topbar">
+  <div class="brand">
+    <span class="dispatch dispatch--idle" id="dispatchDesktop" aria-hidden="true">
+      <svg viewBox="0 0 100 60" xmlns="http://www.w3.org/2000/svg" focusable="false">
+        <polygon class="wing-light" points="92,30 10,6 46,32" />
+        <polygon class="wing-dark" points="92,30 10,54 46,32" />
+        <polygon class="tailfin" points="46,32 28,46 44,36" />
+      </svg>
+    </span>
+    <h1>Dispatch</h1>
+  </div>
+  <span class="status" id="status">Loading…</span>
+  <span class="status mono" id="pageEstimate"></span>
+  <div class="topbar-actions">
+    <button class="btn" id="btnNew" type="button">New</button>
+    <button class="btn" id="btnBackup" type="button" title="Save a .json backup of everything you've typed">Backup</button>
+    <button class="btn" id="btnRestore" type="button" title="Restore from a previously saved .json backup">Restore</button>
+    <input type="file" id="fileRestore" accept="application/json" style="display:none" />
+    <button class="btn icon-only" id="btnSettings" type="button" title="AI Assist settings" aria-label="AI Assist settings">&#9881;<span class="btn-label"> AI Assist</span></button>
+    <button class="btn" id="btnPdf" type="button">Download PDF</button>
+    <button class="btn btn-primary" id="btnDocx" type="button">Download Word</button>
+  </div>
 </div>
-
-<div class="mobile-tabs">
-  <button id="tabEdit" type="button">Edit</button>
-  <button id="tabPreview" type="button">Preview</button>
-</div>
+<div class="sheet-backdrop" id="sheetBackdrop"></div>
 
 <div class="workspace">
   <div class="editor active" id="editor"></div>
@@ -66,8 +78,58 @@
   </div>
 </div>
 
+<!-- Mobile-only: a single persistent control for Edit/Preview plus everything
+     else, replacing the old easy-to-miss top tab bar. Preview is now always
+     one of exactly two visible taps away, never hidden behind a menu.
+     Dispatch rides in his own badge, separate from the sliding Edit/Preview
+     thumb, so his icon never overlaps the segment labels. -->
+<nav class="mobile-pill" id="mobilePill" aria-label="View and actions">
+  <span class="dispatch-badge">
+    <span class="dispatch dispatch--idle" id="dispatchPill" aria-hidden="true">
+      <svg viewBox="0 0 100 60" xmlns="http://www.w3.org/2000/svg" focusable="false">
+        <polygon class="wing-light" points="92,30 10,6 46,32" />
+        <polygon class="wing-dark" points="92,30 10,54 46,32" />
+        <polygon class="tailfin" points="46,32 28,46 44,36" />
+      </svg>
+    </span>
+  </span>
+  <div class="pill-toggle" id="pillToggle">
+    <div class="pill-thumb" id="pillThumb"></div>
+    <button class="pill-seg active" id="segEdit" type="button" aria-pressed="true">Edit</button>
+    <button class="pill-seg" id="segPreview" type="button" aria-pressed="false">Preview</button>
+  </div>
+  <button class="pill-more" id="btnMore" type="button" aria-label="More actions: New, Backup, Restore, AI settings, Export">&#8226;&#8226;&#8226;</button>
+</nav>
+
+<!-- AI Assist settings (Groq API key). Kept in its own localStorage key,
+     never inside the CV draft, so it can never end up in an exported
+     Backup .json file. -->
+<div class="drawer-backdrop" id="drawerBackdrop"></div>
+<aside class="settings-drawer" id="settingsDrawer" aria-hidden="true" aria-label="AI Assist settings">
+  <h2>AI Assist</h2>
+  <p>
+    Optional. Paste your own free Groq API key to enable the ✨ rewrite
+    button on bullet points. Only the text of the specific bullet you click
+    ✨ on is sent to Groq. Nothing else about your CV is sent, and nothing
+    is sent unless you click it. Your key is stored only in this browser
+    and is never included in Backup files.
+  </p>
+  <label for="groqKeyInput">Groq API key</label>
+  <input type="password" id="groqKeyInput" placeholder="gsk_…" autocomplete="off" />
+  <div class="drawer-actions">
+    <button class="btn btn-primary" id="btnSaveKey" type="button">Save key</button>
+    <button class="btn" id="btnClearKey" type="button">Remove</button>
+  </div>
+  <div class="drawer-note">
+    Don't have a key? Create a free one at console.groq.com/keys. No
+    credit card required. Free-tier requests are rate-limited, so if ✨
+    fails with a rate-limit message, wait a minute and try again.
+  </div>
+  <button class="btn btn-close-drawer" id="btnCloseDrawer" type="button">Close</button>
+</aside>
+
 <footer class="app-footer">
-  Everything you type stays on this device. Nothing is uploaded anywhere.
+  Everything you type stays on this device, except a bullet's text if you use ✨ AI Assist.
 </footer>
 
 <!-- Export libraries, loaded from CDN; cached offline by the service worker after first load.
