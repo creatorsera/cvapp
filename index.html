@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>CV Builder</title>
+
+<!--
+  Security notes:
+  - Everything runs client-side. No form data is ever sent to a server —
+    your CV content never leaves this device except into the PDF/DOCX
+    files you export yourself.
+  - The only network requests this app makes are to load the two export
+    libraries below (html2pdf.js, docx.js) from their CDNs on first use.
+    After that, the service worker caches them for offline use.
+  - Content-Security-Policy below restricts scripts to this app's own
+    origin plus those two named CDNs — no inline scripts, no eval.
+-->
+<meta http-equiv="Content-Security-Policy" content="
+  default-src 'self';
+  script-src 'self' https://cdnjs.cloudflare.com https://unpkg.com;
+  style-src 'self' 'unsafe-inline';
+  img-src 'self' data:;
+  font-src 'self';
+  connect-src 'self';
+  object-src 'none';
+  base-uri 'self';
+  form-action 'none';
+  frame-ancestors 'none';
+">
+
+<link rel="manifest" href="manifest.json" />
+<link rel="icon" href="icons/icon-192.png" />
+<link rel="apple-touch-icon" href="icons/icon-192.png" />
+<meta name="theme-color" content="#1F3A5F" />
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+<div class="topbar">
+  <h1>CV Builder</h1>
+  <span class="status" id="status">Loading\u2026</span>
+  <span class="status" id="pageEstimate"></span>
+  <button class="btn" id="btnNew" type="button">New</button>
+  <button class="btn" id="btnPdf" type="button">Download PDF</button>
+  <button class="btn btn-primary" id="btnDocx" type="button">Download Word</button>
+</div>
+
+<div class="mobile-tabs">
+  <button id="tabEdit" type="button">Edit</button>
+  <button id="tabPreview" type="button">Preview</button>
+</div>
+
+<div class="workspace">
+  <div class="editor active" id="editor"></div>
+  <div class="preview-pane active" id="previewPane">
+    <div class="page" id="resumePage" data-font="calibri" data-size="normal"></div>
+  </div>
+</div>
+
+<footer class="app-footer">
+  Everything you type stays on this device. Nothing is uploaded anywhere.
+</footer>
+
+<!-- Export libraries, loaded from CDN; cached offline by the service worker after first load -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/docx@8.5.0/build/index.js" crossorigin="anonymous"></script>
+
+<script src="app.js"></script>
+</body>
+</html>
