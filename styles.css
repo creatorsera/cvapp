@@ -115,6 +115,22 @@ button {
   .editor, .preview-pane { display: none; }
   .editor.active, .preview-pane.active { display: block; }
   .mobile-tabs { display: flex; }
+  .preview-pane { padding: 16px 0; }
+  .topbar { overflow-x: auto; flex-wrap: nowrap; }
+  .topbar .btn, .topbar h1 { flex-shrink: 0; }
+}
+
+/* Shrinks the fixed-width 816px page to fit narrow viewports without
+   horizontal scrolling. #pageScaleWrap's height is set by JS to the
+   post-scale height, since `transform` alone doesn't reflow layout. */
+.page-scale-wrap {
+  width: 100%;
+  overflow: hidden;
+}
+.page-scale-wrap .page {
+  transform: scale(var(--page-scale, 1));
+  transform-origin: top center;
+  margin: 0 auto;
 }
 
 .mobile-tabs {
@@ -331,6 +347,7 @@ button {
 /* ---------- Resume preview (paper) ---------- */
 
 .page {
+  position: relative;
   background: #ffffff;
   width: 816px;
   min-height: 1056px;
@@ -403,14 +420,34 @@ button {
 
 .rp-bullets li { margin-bottom: 2px; line-height: 1.4; }
 
+/* Two-column layout via flexbox rather than CSS `columns` - html2canvas
+   (used for PDF export) has long-standing bugs rendering multi-column
+   layouts. Note: flex/grid items get "blockified" per spec, which drops
+   the native `::marker` bullet on <li> in every browser - so list-style
+   is disabled here and the bullet is drawn back in manually. */
 .rp-flatlist {
   margin: 0;
-  padding-left: 18px;
-  columns: 2;
-  column-gap: 24px;
+  padding-left: 0;
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
 }
 
-.rp-flatlist li { margin-bottom: 3px; line-height: 1.4; break-inside: avoid; }
+.rp-flatlist li {
+  width: 50%;
+  box-sizing: border-box;
+  padding-left: 14px;
+  padding-right: 24px;
+  margin-bottom: 3px;
+  line-height: 1.4;
+  position: relative;
+}
+
+.rp-flatlist li::before {
+  content: "\2022";
+  position: absolute;
+  left: 2px;
+}
 
 .rp-knowledge-item { margin-bottom: 5px; line-height: 1.45; }
 .rp-knowledge-item b { font-weight: 700; }
@@ -421,9 +458,11 @@ button {
 .accent .rp-contact, .accent .rp-section-title { border-color: var(--accent-color, #1F3A5F); }
 
 .page-overflow-marker {
-  position: relative;
+  position: absolute;
+  left: 0;
+  right: 0;
   border-top: 2px dashed #c33;
-  margin-top: 4px;
+  pointer-events: none;
 }
 .page-overflow-marker::after {
   content: "Page break (content beyond this line spills to page " attr(data-page) ")";
@@ -433,6 +472,8 @@ button {
   font-size: 10px;
   color: #c33;
   font-family: var(--font-ui);
+  background: #fff;
+  padding: 0 4px 0 0;
 }
 
 footer.app-footer {
@@ -440,4 +481,18 @@ footer.app-footer {
   color: var(--ink-soft);
   text-align: center;
   padding: 8px;
+}
+
+/* If someone hits Ctrl+P instead of "Download PDF", print just the resume
+   page, not the toolbar/editor/tabs around it. */
+@media print {
+  .topbar, .mobile-tabs, .editor, footer.app-footer { display: none !important; }
+  .workspace, .preview-pane { display: block !important; padding: 0 !important; background: #fff !important; }
+  .page-scale-wrap { height: auto !important; width: auto !important; }
+  .page {
+    box-shadow: none !important;
+    transform: none !important;
+    margin: 0 auto !important;
+  }
+  .page-overflow-marker { display: none; }
 }

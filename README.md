@@ -60,28 +60,41 @@ field starts blank, and all example/hint text is generic.
   edit, and every field has short guidance text under it
 
 **Preview & styling**
-- Live paper preview that updates as you type — what you see is what exports
-- Font choice: Calibri, Arial, Georgia, Times New Roman
+- Live paper preview that updates as you type, with a dashed line marking
+  where content spills onto the next page
+- On phones, the preview scales down to fit the screen instead of requiring
+  horizontal scrolling
+- Font choice: Calibri, Arial, Georgia, Times New Roman (PDF/DOCX approximate
+  these with the closest built-in font, see Known limitations)
 - Text size: Compact / Normal / Large
 - Accent color swatches, or plain black-and-white
 - A rough page-count estimate in the top bar
 
 **Export**
-- Download PDF — renders the exact preview you see
-- Download Word (.docx) — built natively as a real Word document (not a
-  PDF-in-disguise), using the same structure/format as the preview
+- Download PDF — built as real, selectable/searchable text via jsPDF, not a
+  screenshot of the preview, so it stays parseable by ATS/résumé-scanning
+  software
+- Download Word (.docx) — built natively as a real Word document, using the
+  same structure/format as the PDF
+- Backup — saves your current draft as a `.json` file
+- Restore — loads a draft back in from a previously saved `.json` backup
+  (asks for confirmation before overwriting your current draft)
 
 **Persistence**
 - Autosaves to your browser's local storage as you type (nothing leaves
   your device)
 - "New" clears the current draft after confirmation
+- Removing an entry (education, experience, knowledge, certification) with
+  content in it asks for confirmation first; empty entries delete instantly
+- Since autosave only lives in this one browser's storage, use Backup/Restore
+  to move a draft between devices or recover it if site data gets cleared
 
 ## Security notes
 
 - 100% client-side. There is no server component; nothing you type is
   transmitted anywhere.
 - The only network requests are to load two export libraries
-  (`html2pdf.js` from cdnjs, `docx.js` from unpkg) the first time you use
+  (`jsPDF` from cdnjs, `docx.js` from unpkg) the first time you use
   export — after that, the service worker caches them for offline use.
 - `index.html` sets a Content-Security-Policy that only allows scripts from
   this app's own origin plus those two named CDNs — no inline scripts, no
@@ -91,23 +104,26 @@ field starts blank, and all example/hint text is generic.
   or paste into the form.
 - Your draft lives only in this browser's local storage on this device —
   clearing browser data or using a different browser/device will not carry
-  it over.
+  it over unless you've saved a Backup file.
 
 ## Known limitations / things to check before you rely on it
 
-- **I could not test this in an actual browser** — this sandbox has no
-  browser and no network access, so I verified the JavaScript/JSON are
-  syntactically valid and reviewed the logic carefully, but I haven't seen
-  it render live. Please open it and click through everything before
-  trusting it for a real application, and tell me if anything breaks.
-- The exact CDN URLs/version numbers for `html2pdf.js` and `docx.js` are
-  pinned to versions I know to be correct as of my knowledge, but CDNs
-  occasionally restructure — if either export button says the library
-  "hasn't finished loading" even with a good connection, check the browser
-  console for a 404 and let me know so I can fix the URL.
-- No multi-resume library yet — it's a single draft at a time. If you want
-  to keep several versions (e.g., one per employer), say so and I'll add a
-  named-drafts list.
+- **I still could not test this in an actual browser** — this sandbox has
+  no browser and no network access to the CDNs the app depends on. I
+  verified the docx@8.5.0 and jsPDF 2.5.1 URLs and their exported globals
+  against their published package contents, and syntax-checked the JS, but
+  I have not seen it render or exported files live. The Word export URL was
+  previously wrong (pointed at a file that doesn't exist in that package
+  version) - fixed now, but please click through PDF, Word, Backup, and
+  Restore once before relying on any of them.
+- PDF and Word use jsPDF/docx's built-in font set, not the actual Calibri/
+  Georgia files - Calibri and Arial both render as Helvetica, Georgia and
+  Times New Roman both render as Times. The live on-screen preview does use
+  the real fonts if your OS has them installed, so the preview and the
+  exported files won't match exactly font-for-font.
+- No multi-resume library yet — it's a single draft at a time. Use Backup
+  to save named copies (e.g. one per employer) outside the app if you need
+  several versions; say so if you want a proper in-app named-drafts list.
 - Drag-and-drop reordering isn't implemented — reordering uses ↑/↓ buttons
   instead, which is more reliable across devices (including touch) and
   fully keyboard-accessible.

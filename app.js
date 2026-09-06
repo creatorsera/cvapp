@@ -133,6 +133,22 @@ function el(tag, attrs, children) {
   return node;
 }
 
+// Only nags for confirmation when the entry actually has something in it -
+// removing a blank entry you just added by mistake should stay a single click.
+function entryHasContent(item) {
+  return Object.keys(item).some((k) => {
+    if (k === "id") return false;
+    const v = item[k];
+    if (Array.isArray(v)) return v.some((x) => x && x.trim());
+    return typeof v === "string" && v.trim();
+  });
+}
+
+function confirmRemove(item, doRemove) {
+  if (entryHasContent(item) && !confirm("Remove this entry? This can't be undone.")) return;
+  doRemove();
+}
+
 function iconBtn(label, title, onClick, danger) {
   return el("button", {
     class: "icon-btn" + (danger ? " danger" : ""),
@@ -190,9 +206,24 @@ function hint(text) {
    EDITOR RENDERING
    ========================================================================= */
 
+let fieldIdCounter = 1;
+
+// Links the visible <label> to its control via for/id so screen readers
+// announce the label when the field receives focus - previously they were
+// just adjacent siblings with no programmatic association. Only applies
+// when there's a single, direct form control to link to; grouped two-input
+// rows (e.g. "Location & phone") set aria-label on each input individually
+// instead, since one <label> can't correctly describe two controls.
 function field(labelText, inputEl, hintText) {
   const wrap = el("div", { class: "field" });
-  wrap.appendChild(el("label", {}, [labelText]));
+  const label = el("label", {}, [labelText]);
+  const isSingleControl = ["INPUT", "TEXTAREA", "SELECT"].includes(inputEl.tagName);
+  if (isSingleControl) {
+    const id = "f" + (fieldIdCounter++);
+    inputEl.id = id;
+    label.setAttribute("for", id);
+  }
+  wrap.appendChild(label);
   wrap.appendChild(inputEl);
   if (hintText) wrap.appendChild(hint(hintText));
   return wrap;
@@ -273,19 +304,19 @@ function renderHeaderCard() {
   const row = el("div", { class: "two-col" });
   row.appendChild(textInput(state.header.location, "City, Country", (v) => {
     state.header.location = v; scheduleSave(); renderPreview();
-  }));
+  })).setAttribute("aria-label", "City, Country");
   row.appendChild(textInput(state.header.phone, "Phone", (v) => {
-    state.header.phone = v; scheduleSave(); renderPreview();
-  }, "tel"));
+    state.header.phone = v; scheduleSave(); renderPreview(); renderEditorPartial();
+  }, "tel")).setAttribute("aria-label", "Phone");
   body.appendChild(field("Location & phone", row));
 
   const row2 = el("div", { class: "two-col" });
   row2.appendChild(textInput(state.header.email, "Email", (v) => {
-    state.header.email = v; scheduleSave(); renderPreview();
-  }, "email"));
+    state.header.email = v; scheduleSave(); renderPreview(); renderEditorPartial();
+  }, "email")).setAttribute("aria-label", "Email");
   row2.appendChild(textInput(state.header.linkedin, "LinkedIn URL or handle", (v) => {
     state.header.linkedin = v; scheduleSave(); renderPreview();
-  }));
+  })).setAttribute("aria-label", "LinkedIn URL or handle");
   body.appendChild(field("Email & LinkedIn", row2, FIELD_HINTS.contact));
 
   card.appendChild(body);
@@ -316,7 +347,7 @@ function bulletEditor(bullets, onChange, hintText) {
   wrap.appendChild(el("label", {}, ["Bullet points"]));
   bullets.forEach((b, i) => {
     const row = el("div", { class: "bullet-row" });
-    const ta = el("textarea", { rows: "2" });
+    const ta = el("textarea", { rows: "2", "aria-label": "Bullet point " + (i + 1) });
     ta.value = b;
     ta.addEventListener("input", (e) => { bullets[i] = e.target.value; onChange(); });
     row.appendChild(ta);
@@ -369,13 +400,13 @@ function renderEducationCard() {
     head.appendChild(el("span", { class: "spacer" }));
     head.appendChild(iconBtn("\u2191", "Move up", () => { if (i > 0) { [items[i-1], items[i]] = [items[i], items[i-1]]; scheduleSave(); renderEditor(); renderPreview(); } }));
     head.appendChild(iconBtn("\u2193", "Move down", () => { if (i < items.length-1) { [items[i+1], items[i]] = [items[i], items[i+1]]; scheduleSave(); renderEditor(); renderPreview(); } }));
-    head.appendChild(iconBtn("\u00d7", "Remove entry", () => { items.splice(i,1); scheduleSave(); renderEditor(); renderPreview(); }, true));
+    head.appendChild(iconBtn("\u00d7", "Remove entry", () => { confirmRemove(item, () => { items.splice(i,1); scheduleSave(); renderEditor(); renderPreview(); }); }, true));
     entry.appendChild(head);
 
     entry.appendChild(field("Degree / qualification", textInput(item.degree, "e.g. BBA (Hons)", (v) => { item.degree = v; scheduleSave(); renderPreview(); }), FIELD_HINTS.eduDegree));
     const row = el("div", { class: "two-col" });
-    row.appendChild(textInput(item.institution, "Institution", (v) => { item.institution = v; scheduleSave(); renderPreview(); }));
-    row.appendChild(textInput(item.dates, "Dates (e.g. 2022 \u2013 2024)", (v) => { item.dates = v; scheduleSave(); renderPreview(); }));
+    row.appendChild(textInput(item.institution, "Institution", (v) => { item.institution = v; scheduleSave(); renderPreview(); })).setAttribute("aria-label", "Institution");
+    row.appendChild(textInput(item.dates, "Dates (e.g. 2022 \u2013 2024)", (v) => { item.dates = v; scheduleSave(); renderPreview(); })).setAttribute("aria-label", "Dates");
     entry.appendChild(field("Institution & dates", row));
 
     entry.appendChild(bulletEditor(item.bullets, () => { scheduleSave(); renderPreview(); }, FIELD_HINTS.eduBullets));
@@ -400,13 +431,13 @@ function renderExperienceCard() {
     head.appendChild(el("span", { class: "spacer" }));
     head.appendChild(iconBtn("\u2191", "Move up", () => { if (i > 0) { [items[i-1], items[i]] = [items[i], items[i-1]]; scheduleSave(); renderEditor(); renderPreview(); } }));
     head.appendChild(iconBtn("\u2193", "Move down", () => { if (i < items.length-1) { [items[i+1], items[i]] = [items[i], items[i+1]]; scheduleSave(); renderEditor(); renderPreview(); } }));
-    head.appendChild(iconBtn("\u00d7", "Remove entry", () => { items.splice(i,1); scheduleSave(); renderEditor(); renderPreview(); }, true));
+    head.appendChild(iconBtn("\u00d7", "Remove entry", () => { confirmRemove(item, () => { items.splice(i,1); scheduleSave(); renderEditor(); renderPreview(); }); }, true));
     entry.appendChild(head);
 
     entry.appendChild(field("Job title", textInput(item.title, "e.g. Finance Officer", (v) => { item.title = v; scheduleSave(); renderPreview(); }), FIELD_HINTS.expTitle));
     const row = el("div", { class: "two-col" });
-    row.appendChild(textInput(item.company, "Company", (v) => { item.company = v; scheduleSave(); renderPreview(); }));
-    row.appendChild(textInput(item.dates, "Dates (e.g. 2024 \u2013 Present)", (v) => { item.dates = v; scheduleSave(); renderPreview(); }));
+    row.appendChild(textInput(item.company, "Company", (v) => { item.company = v; scheduleSave(); renderPreview(); })).setAttribute("aria-label", "Company");
+    row.appendChild(textInput(item.dates, "Dates (e.g. 2024 \u2013 Present)", (v) => { item.dates = v; scheduleSave(); renderPreview(); })).setAttribute("aria-label", "Dates");
     entry.appendChild(field("Company & dates", row));
 
     entry.appendChild(bulletEditor(item.bullets, () => { scheduleSave(); renderPreview(); }, FIELD_HINTS.expBullets));
@@ -432,7 +463,7 @@ function renderKnowledgeCard() {
     head.appendChild(el("span", { class: "spacer" }));
     head.appendChild(iconBtn("\u2191", "Move up", () => { if (i > 0) { [items[i-1], items[i]] = [items[i], items[i-1]]; scheduleSave(); renderEditor(); renderPreview(); } }));
     head.appendChild(iconBtn("\u2193", "Move down", () => { if (i < items.length-1) { [items[i+1], items[i]] = [items[i], items[i+1]]; scheduleSave(); renderEditor(); renderPreview(); } }));
-    head.appendChild(iconBtn("\u00d7", "Remove entry", () => { items.splice(i,1); scheduleSave(); renderEditor(); renderPreview(); }, true));
+    head.appendChild(iconBtn("\u00d7", "Remove entry", () => { confirmRemove(item, () => { items.splice(i,1); scheduleSave(); renderEditor(); renderPreview(); }); }, true));
     entry.appendChild(head);
 
     entry.appendChild(field("Category", textInput(item.category, "e.g. Risk Management", (v) => { item.category = v; scheduleSave(); renderPreview(); }), FIELD_HINTS.knowledge));
@@ -453,7 +484,7 @@ function renderFlatListCard(sectionKey, title, hintText, placeholder) {
 
   items.forEach((val, i) => {
     const row = el("div", { class: "bullet-row" });
-    row.appendChild(textInput(val, placeholder, (v) => { items[i] = v; scheduleSave(); renderPreview(); }));
+    row.appendChild(textInput(val, placeholder, (v) => { items[i] = v; scheduleSave(); renderPreview(); })).setAttribute("aria-label", title + " item " + (i + 1));
     row.appendChild(iconBtn("\u00d7", "Remove", () => { items.splice(i,1); scheduleSave(); renderEditor(); renderPreview(); }, true));
     body.appendChild(row);
   });
@@ -471,10 +502,10 @@ function renderCertificationsCard() {
 
   items.forEach((item, i) => {
     const row = el("div", { class: "two-col", style: "margin-bottom:6px" });
-    row.appendChild(textInput(item.name, "Certification name", (v) => { item.name = v; scheduleSave(); renderPreview(); }));
+    row.appendChild(textInput(item.name, "Certification name", (v) => { item.name = v; scheduleSave(); renderPreview(); })).setAttribute("aria-label", "Certification name");
     const sub = el("div", { style: "display:flex; gap:6px;" });
-    sub.appendChild(textInput(item.issuer, "Issuing body", (v) => { item.issuer = v; scheduleSave(); renderPreview(); }));
-    sub.appendChild(iconBtn("\u00d7", "Remove", () => { items.splice(i,1); scheduleSave(); renderEditor(); renderPreview(); }, true));
+    sub.appendChild(textInput(item.issuer, "Issuing body", (v) => { item.issuer = v; scheduleSave(); renderPreview(); })).setAttribute("aria-label", "Issuing body");
+    sub.appendChild(iconBtn("\u00d7", "Remove", () => { confirmRemove(item, () => { items.splice(i,1); scheduleSave(); renderEditor(); renderPreview(); }); }, true));
     row.appendChild(sub);
     body.appendChild(row);
   });
@@ -650,6 +681,7 @@ function renderPreview() {
   }
 
   updatePageEstimate();
+  updatePageScale();
 }
 
 function updatePageEstimate() {
@@ -658,27 +690,271 @@ function updatePageEstimate() {
   const pages = Math.max(1, Math.ceil(page.scrollHeight / pageHeightPx));
   const el2 = document.getElementById("pageEstimate");
   if (el2) el2.textContent = pages + (pages === 1 ? " page" : " pages (est.)");
+  renderPageBreakMarkers(page, pages, pageHeightPx);
 }
 
+// Draws a dashed line + label at each page boundary inside the live preview,
+// so it's obvious before exporting where content will actually split across
+// pages. Purely visual - never exported (PDF/DOCX build from `state`, not
+// from this DOM).
+function renderPageBreakMarkers(page, pages, pageHeightPx) {
+  page.querySelectorAll(".page-overflow-marker").forEach((m) => m.remove());
+  if (pages <= 1) return;
+  for (let i = 1; i < pages; i++) {
+    const marker = el("div", { class: "page-overflow-marker", "data-page": String(i + 1) });
+    marker.style.top = (i * pageHeightPx) + "px";
+    page.appendChild(marker);
+  }
+}
+
+const PAGE_NATIVE_WIDTH = 816;
+const MOBILE_BREAKPOINT = 860;
+
+// The .page element is a fixed 816px wide (Letter-size at 96dpi) so PDF/DOCX
+// export always matches the preview pixel-for-pixel. On narrow viewports that
+// forces horizontal scrolling, so we scale it down visually with a CSS
+// transform. transform doesn't affect layout size, so we also set the
+// wrapper's height by hand to the post-scale height to avoid leftover blank
+// space below the shrunk page.
+function updatePageScale() {
+  const wrap = document.getElementById("pageScaleWrap");
+  const page = document.getElementById("resumePage");
+  if (!wrap || !page) return;
+
+  if (window.innerWidth > MOBILE_BREAKPOINT) {
+    page.style.removeProperty("--page-scale");
+    wrap.style.height = "";
+    return;
+  }
+
+  const available = wrap.clientWidth || window.innerWidth;
+  const scale = Math.min(1, (available - 4) / PAGE_NATIVE_WIDTH);
+  page.style.setProperty("--page-scale", scale);
+  wrap.style.height = Math.ceil(page.scrollHeight * scale) + "px";
+}
+
+window.addEventListener("resize", () => updatePageScale());
+
 /* =========================================================================
-   EXPORT: PDF (renders the live preview exactly as shown)
+   EXPORT: PDF
+   Built as real, selectable/searchable text via jsPDF - not a rasterized
+   screenshot of the preview. A picture-of-text PDF (the old html2canvas
+   approach) can't be parsed by ATS/résumé-scanning software, which defeats
+   the point for a CV. jsPDF only ships the 14 standard PDF fonts, so the
+   font choice is approximated: Calibri/Arial -> Helvetica, Georgia/Times ->
+   Times (no way to embed the actual TrueType font from the browser without
+   shipping font files, which is out of scope for a zero-dependency tool).
    ========================================================================= */
 
+const PDF_PAGE = { width: 612, height: 792 }; // US Letter, in points
+const PDF_MARGIN = { top: 40, bottom: 40, left: 48, right: 48 };
+const PDF_FONT_MAP = {
+  calibri: "helvetica", arial: "helvetica",
+  georgia: "times", times: "times"
+};
+const PDF_SIZE_MAP = { compact: 9, normal: 10, large: 11 };
+
+function buildTextPdf() {
+  const jsPDFCtor = (window.jspdf && window.jspdf.jsPDF) || window.jsPDF;
+  const doc = new jsPDFCtor({ unit: "pt", format: [PDF_PAGE.width, PDF_PAGE.height], orientation: "portrait" });
+
+  const baseFont = PDF_FONT_MAP[state.style.font] || "helvetica";
+  const baseSize = PDF_SIZE_MAP[state.style.fontSize] || 10;
+  const accentHex = state.style.accent !== "none" ? state.style.accent : "#000000";
+  const accentRgb = hexToRgb(accentHex);
+  const contentWidth = PDF_PAGE.width - PDF_MARGIN.left - PDF_MARGIN.right;
+
+  let y = PDF_MARGIN.top;
+
+  function ensureSpace(neededHeight) {
+    if (y + neededHeight > PDF_PAGE.height - PDF_MARGIN.bottom) {
+      doc.addPage();
+      y = PDF_MARGIN.top;
+    }
+  }
+
+  function setColor(rgb) { doc.setTextColor(rgb[0], rgb[1], rgb[2]); }
+  function setLineColor(rgb) { doc.setDrawColor(rgb[0], rgb[1], rgb[2]); }
+
+  function writeWrapped(text, size, opts) {
+    opts = opts || {};
+    doc.setFont(baseFont, opts.style || "normal");
+    doc.setFontSize(size);
+    setColor(opts.color || [17, 17, 17]);
+    const lines = doc.splitTextToSize(text, opts.width || contentWidth);
+    const lineHeight = size * 1.35;
+    lines.forEach((line) => {
+      ensureSpace(lineHeight);
+      doc.text(line, opts.x !== undefined ? opts.x : PDF_MARGIN.left, y, opts.align ? { align: opts.align } : undefined);
+      y += lineHeight;
+    });
+    return lines.length * lineHeight;
+  }
+
+  function sectionHeading(text) {
+    ensureSpace(baseSize * 2.2);
+    y += baseSize * 0.6;
+    doc.setFont(baseFont, "bold");
+    doc.setFontSize(baseSize + 1);
+    setColor(accentRgb);
+    doc.text(text.toUpperCase(), PDF_MARGIN.left, y);
+    y += 3;
+    setLineColor(accentRgb);
+    doc.setLineWidth(0.75);
+    doc.line(PDF_MARGIN.left, y, PDF_PAGE.width - PDF_MARGIN.right, y);
+    y += baseSize * 0.9;
+  }
+
+  function entryHeadLine(left, right) {
+    ensureSpace(baseSize * 1.5);
+    doc.setFont(baseFont, "bold");
+    doc.setFontSize(baseSize);
+    setColor([17, 17, 17]);
+    doc.text(left || "", PDF_MARGIN.left, y);
+    if (right) doc.text(right, PDF_PAGE.width - PDF_MARGIN.right, y, { align: "right" });
+    y += baseSize * 1.35;
+  }
+
+  function subLine(text) {
+    ensureSpace(baseSize * 1.4);
+    doc.setFont(baseFont, "italic");
+    doc.setFontSize(baseSize);
+    setColor([60, 60, 60]);
+    doc.text(text, PDF_MARGIN.left, y);
+    y += baseSize * 1.3;
+  }
+
+  function bulletLine(text) {
+    const indent = 12;
+    doc.setFont(baseFont, "normal");
+    doc.setFontSize(baseSize - 0.5);
+    const lines = doc.splitTextToSize(text, contentWidth - indent);
+    const lineHeight = (baseSize - 0.5) * 1.3;
+    lines.forEach((line, i) => {
+      ensureSpace(lineHeight);
+      if (i === 0) {
+        setColor([17, 17, 17]);
+        doc.text("\u2022", PDF_MARGIN.left, y);
+      }
+      doc.text(line, PDF_MARGIN.left + indent, y);
+      y += lineHeight;
+    });
+  }
+
+  // ---- Header ----
+  const h = state.header;
+  doc.setFont(baseFont, "bold");
+  doc.setFontSize(baseSize + 10);
+  setColor(accentHex !== "#000000" ? accentRgb : [17, 17, 17]);
+  doc.text((h.name || "Your Name").toUpperCase(), PDF_PAGE.width / 2, y, { align: "center" });
+  y += (baseSize + 10) * 1.2;
+
+  if (h.tagline) {
+    doc.setFont(baseFont, "normal");
+    doc.setFontSize(baseSize + 1);
+    setColor([50, 50, 50]);
+    doc.text(h.tagline, PDF_PAGE.width / 2, y, { align: "center" });
+    y += (baseSize + 1) * 1.4;
+  }
+
+  const contactParts = [h.location, h.phone, h.email, h.linkedin].filter(Boolean);
+  if (contactParts.length) {
+    doc.setFont(baseFont, "normal");
+    doc.setFontSize(baseSize - 1);
+    setColor([50, 50, 50]);
+    doc.text(contactParts.join("   |   "), PDF_PAGE.width / 2, y, { align: "center" });
+    y += (baseSize - 1) * 1.3 + 6;
+    setLineColor([0, 0, 0]);
+    doc.setLineWidth(0.75);
+    doc.line(PDF_MARGIN.left, y, PDF_PAGE.width - PDF_MARGIN.right, y);
+    y += baseSize;
+  }
+
+  if (state.summary) {
+    sectionHeading("Summary");
+    writeWrapped(state.summary, baseSize);
+    y += 4;
+  }
+
+  const S = state.sections;
+
+  if (S.education.visible && S.education.items.some((i) => i.degree || i.institution)) {
+    sectionHeading("Education");
+    S.education.items.forEach((item) => {
+      if (!item.degree && !item.institution) return;
+      entryHeadLine(item.degree || "", item.dates || "");
+      if (item.institution) subLine(item.institution);
+      item.bullets.filter(Boolean).forEach((b) => bulletLine(b));
+      y += 4;
+    });
+  }
+
+  if (S.experience.visible && S.experience.items.some((i) => i.title || i.company)) {
+    sectionHeading("Professional Experience");
+    S.experience.items.forEach((item) => {
+      if (!item.title && !item.company) return;
+      entryHeadLine(item.title || "", item.dates || "");
+      if (item.company) subLine(item.company);
+      item.bullets.filter(Boolean).forEach((b) => bulletLine(b));
+      y += 4;
+    });
+  }
+
+  if (S.knowledge.visible && S.knowledge.items.some((i) => i.category)) {
+    sectionHeading("Areas of Knowledge");
+    S.knowledge.items.forEach((item) => {
+      if (!item.category) return;
+      const text = item.category + (item.description ? ": " + item.description : "");
+      bulletLine(text);
+    });
+    y += 4;
+  }
+
+  if (S.skills.visible && S.skills.items.some(Boolean)) {
+    sectionHeading("Skills");
+    S.skills.items.filter(Boolean).forEach((s) => bulletLine(s));
+    y += 4;
+  }
+
+  if (S.certifications.visible && S.certifications.items.some((i) => i.name)) {
+    sectionHeading("Certifications");
+    S.certifications.items.forEach((item) => {
+      if (!item.name) return;
+      bulletLine(item.name + (item.issuer ? " \u2013 " + item.issuer : ""));
+    });
+    y += 4;
+  }
+
+  if (S.strengths.visible && S.strengths.items.some(Boolean)) {
+    sectionHeading("Additional Strengths");
+    S.strengths.items.filter(Boolean).forEach((s) => bulletLine(s));
+  }
+
+  return doc;
+}
+
+function hexToRgb(hex) {
+  const clean = (hex || "#000000").replace("#", "");
+  const num = parseInt(clean.length === 3
+    ? clean.split("").map((c) => c + c).join("")
+    : clean, 16);
+  return [(num >> 16) & 255, (num >> 8) & 255, num & 255];
+}
+
 function exportPdf() {
-  if (typeof html2pdf === "undefined") {
+  const jsPDFCtor = (window.jspdf && window.jspdf.jsPDF) || window.jsPDF;
+  if (typeof jsPDFCtor === "undefined") {
     alert("PDF export library hasn't finished loading. Check your connection and try again.");
     return;
   }
-  const page = document.getElementById("resumePage");
   const filename = (state.header.name || "resume").trim().replace(/\s+/g, "_") + ".pdf";
-  const opt = {
-    margin: 0,
-    filename: filename,
-    image: { type: "jpeg", quality: 0.98 },
-    html2canvas: { scale: 2, useCORS: true },
-    jsPDF: { unit: "px", format: [816, Math.max(1056, page.scrollHeight)], orientation: "portrait" }
-  };
-  html2pdf().set(opt).from(page).save();
+  try {
+    const doc = buildTextPdf();
+    doc.save(filename);
+  } catch (err) {
+    console.error(err);
+    alert("Could not build the PDF. See console for details.");
+  }
 }
 
 /* =========================================================================
@@ -833,6 +1109,49 @@ function exportDocx() {
 }
 
 /* =========================================================================
+   BACKUP / RESTORE  (plain JSON of `state` — the only way to move a draft
+   between browsers/devices, or recover from cleared site data, since
+   everything otherwise lives only in this browser's local storage)
+   ========================================================================= */
+
+function exportJsonBackup() {
+  const filename = (state.header.name || "cv").trim().replace(/\s+/g, "_") + "_backup.json";
+  const blob = new Blob([JSON.stringify(state, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function importJsonBackup(file) {
+  const reader = new FileReader();
+  reader.onload = () => {
+    let parsed;
+    try {
+      parsed = JSON.parse(reader.result);
+    } catch (e) {
+      alert("That file doesn't look like a valid CV Builder backup (not valid JSON).");
+      return;
+    }
+    if (!parsed || typeof parsed !== "object" || !parsed.header || !parsed.sections) {
+      alert("That file doesn't look like a valid CV Builder backup.");
+      return;
+    }
+    if (!confirm("Replace your current draft with this backup? This can't be undone.")) return;
+    const base = defaultState();
+    state = Object.assign(base, parsed, {
+      header: Object.assign(base.header, parsed.header),
+      sections: Object.assign(base.sections, parsed.sections),
+      style: Object.assign(base.style, parsed.style)
+    });
+    scheduleSave(); renderEditor(); renderPreview();
+  };
+  reader.onerror = () => alert("Could not read that file.");
+  reader.readAsText(file);
+}
+
+/* =========================================================================
    TOP-LEVEL CONTROLS
    ========================================================================= */
 
@@ -844,6 +1163,15 @@ function wireTopbar() {
   });
   document.getElementById("btnPdf").addEventListener("click", exportPdf);
   document.getElementById("btnDocx").addEventListener("click", exportDocx);
+  document.getElementById("btnBackup").addEventListener("click", exportJsonBackup);
+
+  const fileInput = document.getElementById("fileRestore");
+  document.getElementById("btnRestore").addEventListener("click", () => fileInput.click());
+  fileInput.addEventListener("change", (e) => {
+    const file = e.target.files && e.target.files[0];
+    if (file) importJsonBackup(file);
+    fileInput.value = ""; // allow re-selecting the same file later
+  });
 }
 
 function wireMobileTabs() {
@@ -858,7 +1186,7 @@ function wireMobileTabs() {
     previewPane.classList.toggle("active", which === "preview");
   }
   editTab.addEventListener("click", () => show("edit"));
-  previewTab.addEventListener("click", () => show("preview"));
+  previewTab.addEventListener("click", () => { show("preview"); updatePageScale(); });
   show("edit");
 }
 
