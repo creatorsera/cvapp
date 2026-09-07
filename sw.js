@@ -2,7 +2,7 @@
 // after the first successful load. Only caches what this app itself needs —
 // no analytics, no third-party trackers.
 
-const CACHE_NAME = "cv-builder-v6";
+const CACHE_NAME = "cv-builder-v7";
 
 const APP_SHELL = [
   "./",

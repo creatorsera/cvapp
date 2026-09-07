@@ -17,51 +17,58 @@
    ========================================================================= */
 
 :root {
-  /* Chrome (app UI, never exported/printed) - light, warm, paper-toned */
-  --ink-950: #f8efe1;      /* page background - lightest cream */
-  --ink-900: #f1e2c8;      /* topbar / panel background */
-  --ink-850: #ecd9b8;      /* deeper panel, e.g. settings drawer */
-  --ink-800: #e4cda2;      /* resting button/badge background */
-  --ink-700: #d8ba82;      /* hover state on the above */
-  --line-dark: rgba(94, 62, 25, 0.16);
-  --line-dark-strong: rgba(94, 62, 25, 0.3);
-  --mist: #7a5a35;         /* secondary text */
-  --mist-dim: #96754c;     /* tertiary/placeholder text */
-  --mist-bright: #2e1f10;  /* primary text - dark brown, near-black */
+  /* Chrome (app UI, never exported/printed) - light, warm, paper-toned.
+     First pass at this palette was too pale (#f8efe1/#f1e2c8/#e4cda2 all
+     sit within a few percent lightness of each other and of white), so
+     nothing had a visible edge and the whole app read as washed-out white
+     rather than brown. This pass uses real saturation and real contrast
+     between layers: a clearly tan desk, white/cream cards sitting on top
+     of it (so their rounded corners actually have an edge to show), and a
+     genuinely brown accent rather than a pale one. */
+  --ink-950: #e8d3ab;      /* page/desk background - a real tan, not near-white */
+  --ink-900: #dcbf88;      /* topbar background - a step deeper than the page */
+  --ink-850: #d2b073;      /* deeper panel, e.g. settings drawer */
+  --ink-800: #fbf5e9;      /* button/card resting background - light cream, sits clearly on top of the tan */
+  --ink-700: #f1e6cd;      /* hover state on the above */
+  --line-dark: rgba(74, 46, 16, 0.28);
+  --line-dark-strong: rgba(74, 46, 16, 0.42);
+  --mist: #5c3d1a;         /* secondary text */
+  --mist-dim: #8a6a3f;     /* tertiary/placeholder text */
+  --mist-bright: #2a1a09;  /* primary text - dark brown, near-black */
 
   /* Paper (index-card fields — a smaller echo of the resume page) */
-  --paper-card: #fffaf0;
-  --paper-card-text: #2e1f10;
-  --paper-card-border: rgba(94, 62, 25, 0.2);
+  --paper-card: #ffffff;
+  --paper-card-text: #2a1a09;
+  --paper-card-border: rgba(74, 46, 16, 0.3);
 
   /* The resume document itself — must stay print-true regardless of theme */
   --paper: #ffffff;
   --ink-doc: #17181c;
 
   /* Accents */
-  --brass: #8b5a2b;
-  --brass-bright: #a5713c;
-  --brass-dim: #6b4520;
-  --brass-ink: #fff6e9;    /* text/icon color when sitting on top of --brass */
-  --stamp: #a8433d;
+  --brass: #7a4a1e;
+  --brass-bright: #96601f;
+  --brass-dim: #5c3814;
+  --brass-ink: #fff8ee;    /* text/icon color when sitting on top of --brass */
+  --stamp: #a8382f;
   --stamp-bright: #c14840;
   --ok: #3f7a55;
-  --warn-bg: #f7e4c2;
-  --warn-text: #7a4a12;
-  --ok-bg: #dcefe1;
-  --danger: #b3413c;
+  --warn-bg: #f3dba0;
+  --warn-text: #6b3d0c;
+  --ok-bg: #cfe8d6;
+  --danger: #a8382f;
 
-  --radius-sm: 8px;
-  --radius-md: 16px;
+  --radius-sm: 10px;
+  --radius-md: 18px;
   --radius-pill: 999px;
 
   --font-display: Georgia, "Times New Roman", serif;
   --font-ui: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   --font-mono: "Courier New", Courier, monospace;
 
-  --shadow-paper: 0 24px 60px -18px rgba(60, 40, 20, 0.28), 0 6px 16px rgba(60, 40, 20, 0.16);
-  --shadow-card: 0 1px 3px rgba(60, 40, 20, 0.14);
-  --shadow-sheet: 0 -10px 30px rgba(60, 40, 20, 0.22);
+  --shadow-paper: 0 24px 60px -18px rgba(60, 40, 20, 0.35), 0 6px 16px rgba(60, 40, 20, 0.2);
+  --shadow-card: 0 2px 6px rgba(60, 40, 20, 0.22);
+  --shadow-sheet: 0 -10px 30px rgba(60, 40, 20, 0.3);
 }
 
 * { box-sizing: border-box; }

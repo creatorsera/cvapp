@@ -189,18 +189,21 @@ as a bottom sheet, rather than duplicating those buttons in two places.
 
 ## Known limitations / things to check before you rely on it
 
-- **This round's changes**: reverted the app icon back to the original
-  navy-background/white-"CV" design (regenerated from scratch - I don't
-  have a stored copy of the original file, so this is a recreation, close
-  but not guaranteed pixel-identical to the very first version). Re-themed
-  the whole app chrome from the dark-ink palette to a light, warm,
-  rounded-corner "paper and coffee" look (all via the existing CSS
-  variable tokens, so this was a values-only change, not a rewrite of
-  every rule). Fixed a real button-sizing bug: the AI Assist gear icon in
-  the desktop topbar had no explicit height, so it rendered visibly
-  shorter than the New/Backup/Restore/PDF/Word buttons beside it (an
-  auto-height icon button next to fixed-padding text buttons) - all
-  topbar buttons now share an explicit height.
+- **This round**: the light-brown re-theme from last time was too pale —
+  the page background, topbar, and button backgrounds were all within a
+  few percent lightness of each other and of white, so nothing had a
+  visible edge, no border-radius was perceivable (there's no shape to see
+  rounding on if the fill barely differs from what's behind it), and the
+  whole thing read as washed-out white rather than brown. This pass uses
+  real contrast: a clearly tan desk, white/cream cards sitting on top of
+  it, and a genuinely brown accent instead of a pale one. Confirmed via
+  the markup that styles.css is actually loading (the "Dispatch" title has
+  no inline style, so its italic serif rendering can only come from the
+  stylesheet) — so this was a color-choice problem, not a loading one.
+  If it still looks unstyled after this, hard-refresh or clear site data
+  first (this app has a service worker for offline support, and a stale
+  cached copy from a previous version is worth ruling out before assuming
+  the code itself is still wrong).
 - **I still could not test this in an actual browser.** This sandbox has
   no browser and no network access to the CDNs or to Groq's API. I
   verified the docx@8.5.0 and jsPDF 2.5.1 URLs and their exported globals
