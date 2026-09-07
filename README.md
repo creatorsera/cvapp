@@ -197,20 +197,41 @@ as a bottom sheet, rather than duplicating those buttons in two places.
   any of this render, animate, or export live. Please click through
   Edit/Preview switching, both exports, Backup/Restore, and AI Assist (if
   you add a key) before relying on any of it.
-- **Found and fixed on this review pass**: Dispatch's icon was originally
-  nested directly inside the sliding Edit/Preview thumb, which put it
-  right behind the "Edit"/"Preview" label text, exactly the kind of visual
-  crowding that reads as clutter on a small screen. He now sits in his own
-  small badge next to the toggle instead of inside it. Also fixed: the
-  settings drawer could briefly render behind the mobile "more" sheet
-  during its own closing animation (a z-index ordering issue), and the AI
-  Assist gear button had no visible text label once it was stretched
-  full-width in that mobile sheet, just a bare glyph.
+- **Reported broken on real devices after the last round, and now fixed**:
+  on an actual Android phone, the Preview page rendered outside the
+  viewport (needed horizontal scrolling), and the desktop layout looked
+  cramped/broken in a non-maximized browser window. Root causes, confirmed
+  by reading the code rather than guessed at:
+  - The mobile scaling used JS that measured an element's `.clientWidth`.
+    That returns `0` whenever the element's ancestor is `display:none`,
+    which was true for the preview pane on every keystroke made while the
+    Edit tab was showing (most of the time), producing a garbage near-zero
+    scale value that could persist until the next explicit recompute.
+    Replaced with a version that reads `window.innerWidth` instead (always
+    valid, regardless of what's hidden) and uses CSS `zoom` instead of
+    `transform` (zoom actually resizes the layout box, so no separate
+    wrapper-height workaround is needed either).
+  - I first tried to fix that same bug with a pure-CSS `zoom: calc(100vw /
+    816)`, specifically to remove JS from the picture entirely - but CSS
+    `calc()` division requires the right-hand side to be a plain unitless
+    number, and dividing two lengths never produces one, so that
+    expression is actually invalid and gets silently dropped, doing
+    nothing. Caught this by checking the CSS math spec before shipping it
+    instead of assuming it would work, and used the JS version above
+    instead.
+  - The desktop toolbar had no `flex-wrap` anywhere and no
+    `flex-shrink: 0`/`white-space: nowrap` protection on its buttons, so
+    any window narrower than roughly 850px (an unmaximized browser window,
+    a 1366×768 laptop, Windows' own split-screen snapping) forced buttons
+    to either wrap their text mid-word or visually squish. Fixed with a
+    proper wrap fallback (extra rows instead of squishing) and shortened
+    the two busiest button labels ("Download PDF"/"Download Word" →
+    "PDF"/"Word", full description still in the tooltip).
 - The pill-thumb slide, the settings drawer, and the bottom sheet are all
-  CSS transitions I could not visually preview. The mechanics are sound on
-  paper (literal CSS class toggles with matching selectors, confirmed by
-  reading the rules back), but exact timing/easing may need a real-device
-  pass to feel right.
+  CSS transitions I still could not visually preview. The mechanics are
+  sound on paper (literal CSS class toggles with matching selectors,
+  confirmed by reading the rules back), but exact timing/easing may need a
+  real-device pass to feel right.
 - PDF and Word use jsPDF/docx's built-in font set, not the actual Calibri/
   Georgia files. Calibri and Arial both render as Helvetica, Georgia and
   Times New Roman both render as Times. The live on-screen preview does

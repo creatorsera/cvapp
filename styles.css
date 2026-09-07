@@ -125,6 +125,8 @@ a { color: var(--brass-bright); }
 .topbar {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
+  row-gap: 8px;
   gap: 14px;
   padding: 12px 18px;
   background: var(--ink-900);
@@ -139,6 +141,7 @@ a { color: var(--brass-bright); }
   align-items: center;
   gap: 8px;
   margin-right: 10px;
+  flex-shrink: 0;
 }
 
 .topbar h1 {
@@ -156,6 +159,7 @@ a { color: var(--brass-bright); }
   color: var(--mist-dim);
   white-space: nowrap;
   margin-right: auto;
+  flex-shrink: 0;
 }
 
 .status.mono { font-family: var(--font-mono); }
@@ -163,6 +167,8 @@ a { color: var(--brass-bright); }
 .topbar-actions {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
   gap: 8px;
 }
 
@@ -174,6 +180,8 @@ a { color: var(--brass-bright); }
   border-radius: var(--radius-sm);
   font-size: 13px;
   line-height: 1.2;
+  flex-shrink: 0;
+  white-space: nowrap;
 }
 
 .btn:hover { background: var(--ink-700); border-color: var(--mist-dim); }
@@ -265,18 +273,33 @@ a { color: var(--brass-bright); }
   .topbar-actions .btn.icon-only .btn-label { display: inline; }
 }
 
-/* Shrinks the fixed-width 816px page to fit narrow viewports without
-   horizontal scrolling. #pageScaleWrap's height is set by JS to the
-   post-scale height, since `transform` alone doesn't reflow layout. */
-.page-scale-wrap {
-  width: 100%;
-  overflow: hidden;
-}
-.page-scale-wrap .page {
-  transform: scale(var(--page-scale, 1));
-  transform-origin: top center;
-  margin: 0 auto;
-}
+/* Mobile page scaling: the .page element is a fixed-width 816px "sheet of
+   paper" (Letter @ 96dpi) so PDF/DOCX export always matches the preview
+   pixel-for-pixel - wider than most phone screens.
+   A previous version handled this with JS that measured #pageScaleWrap's
+   .clientWidth and applied a CSS `transform: scale()`. Two real bugs in
+   that: (1) .clientWidth returns 0 whenever the element's ancestor is
+   display:none, which is true for the preview pane most of the time (it
+   recomputed on every keystroke, most of which happen on the Edit tab with
+   Preview hidden), producing a garbage near-zero scale that could persist
+   until the next explicit recompute; (2) `transform` doesn't change layout
+   size, so a wrapper height had to be set by hand to avoid leftover blank
+   space, another thing that could get out of sync. That combination is the
+   direct cause of the resume rendering outside the viewport on Android.
+   I initially tried to fix this with a pure-CSS `zoom: calc(100vw / 816)`
+   to remove JS from the equation entirely, but CSS calc() division
+   requires the right-hand operand to be a plain unitless number, dividing
+   two lengths does not produce one, so that calc() would actually be
+   invalid and get silently dropped, doing nothing. Confirmed this against
+   the spec before shipping it instead of assuming.
+   The actual fix: still a tiny bit of JS, but reading window.innerWidth
+   (a property of the viewport itself, always valid no matter what's
+   hidden) instead of any element's clientWidth, and using `zoom` (which
+   really resizes the layout box, unlike transform) instead of `transform`,
+   so there's no wrapper-height workaround needed either. See
+   updatePageZoom() in app.js. */
+.page-scale-wrap { width: 100%; overflow: hidden; display: flex; justify-content: center; }
+.page { zoom: var(--page-zoom, 1); }
 
 /* ---------- Mobile pill (Edit / Preview toggle + more actions) ---------- */
 
@@ -830,6 +853,7 @@ footer.app-footer {
   .page {
     box-shadow: none !important;
     transform: none !important;
+    zoom: normal !important;
     margin: 0 auto !important;
   }
   .page-overflow-marker { display: none; }

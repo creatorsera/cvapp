@@ -685,14 +685,25 @@ function renderPreview() {
     page.appendChild(ul);
   }
 
+  updatePageZoom();
   updatePageEstimate();
-  updatePageScale();
+}
+
+// Reads back the CSS `zoom` factor applied to .page on narrow viewports (see
+// styles.css) so the page-count estimate and page-break markers are computed
+// against the resume's true, unscaled height rather than its on-screen
+// shrunk height. Falls back to 1 in any browser that doesn't support `zoom`
+// (in which case .page simply isn't shrunk either, so no correction needed).
+function currentPageZoom(page) {
+  const z = parseFloat(getComputedStyle(page).zoom);
+  return z > 0 ? z : 1;
 }
 
 function updatePageEstimate() {
   const page = document.getElementById("resumePage");
   const pageHeightPx = 1056; // approx one Letter page at 96dpi
-  const pages = Math.max(1, Math.ceil(page.scrollHeight / pageHeightPx));
+  const trueHeight = page.scrollHeight / currentPageZoom(page);
+  const pages = Math.max(1, Math.ceil(trueHeight / pageHeightPx));
   const el2 = document.getElementById("pageEstimate");
   if (el2) el2.textContent = pages + (pages === 1 ? " page" : " pages (est.)");
   renderPageBreakMarkers(page, pages, pageHeightPx);
@@ -701,7 +712,9 @@ function updatePageEstimate() {
 // Draws a dashed line + label at each page boundary inside the live preview,
 // so it's obvious before exporting where content will actually split across
 // pages. Purely visual - never exported (PDF/DOCX build from `state`, not
-// from this DOM).
+// from this DOM). Positions are in .page's own (possibly zoomed) coordinate
+// space, since these markers are children of .page and get zoomed along
+// with everything else inside it, so no zoom correction is needed here.
 function renderPageBreakMarkers(page, pages, pageHeightPx) {
   page.querySelectorAll(".page-overflow-marker").forEach((m) => m.remove());
   if (pages <= 1) return;
@@ -712,33 +725,25 @@ function renderPageBreakMarkers(page, pages, pageHeightPx) {
   }
 }
 
+/* Computes the mobile zoom ratio for #resumePage (see the long comment on
+   .page-scale-wrap in styles.css for why this exists and why it reads
+   window.innerWidth rather than any element's clientWidth). Safe to call
+   regardless of which tab is currently visible. */
 const PAGE_NATIVE_WIDTH = 816;
 const MOBILE_BREAKPOINT = 860;
 
-// The .page element is a fixed 816px wide (Letter-size at 96dpi) so PDF/DOCX
-// export always matches the preview pixel-for-pixel. On narrow viewports that
-// forces horizontal scrolling, so we scale it down visually with a CSS
-// transform. transform doesn't affect layout size, so we also set the
-// wrapper's height by hand to the post-scale height to avoid leftover blank
-// space below the shrunk page.
-function updatePageScale() {
-  const wrap = document.getElementById("pageScaleWrap");
+function updatePageZoom() {
   const page = document.getElementById("resumePage");
-  if (!wrap || !page) return;
-
+  if (!page) return;
   if (window.innerWidth > MOBILE_BREAKPOINT) {
-    page.style.removeProperty("--page-scale");
-    wrap.style.height = "";
+    page.style.removeProperty("--page-zoom");
     return;
   }
-
-  const available = wrap.clientWidth || window.innerWidth;
-  const scale = Math.min(1, (available - 4) / PAGE_NATIVE_WIDTH);
-  page.style.setProperty("--page-scale", scale);
-  wrap.style.height = Math.ceil(page.scrollHeight * scale) + "px";
+  const ratio = Math.min(1, (window.innerWidth - 24) / PAGE_NATIVE_WIDTH);
+  page.style.setProperty("--page-zoom", Math.max(0.2, ratio));
 }
 
-window.addEventListener("resize", () => updatePageScale());
+window.addEventListener("resize", updatePageZoom);
 
 /* =========================================================================
    EXPORT: PDF
@@ -1303,7 +1308,7 @@ function wireMobilePill() {
     segPreview.setAttribute("aria-pressed", String(which === "preview"));
     editorPane.classList.toggle("active", which === "edit");
     previewPane.classList.toggle("active", which === "preview");
-    if (which === "preview") updatePageScale();
+    if (which === "preview") updatePageEstimate(); // refresh the "N pages" readout now that it's actually visible
   }
   segEdit.addEventListener("click", () => show("edit"));
   segPreview.addEventListener("click", () => show("preview"));
