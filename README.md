@@ -47,15 +47,16 @@ starts blank, and all example/hint text is generic.
 ## Design direction: a correspondence desk, not a dashboard
 
 The redesign leans into the fact that a CV is, at the end of the day, a
-piece of paper. The app chrome (editor, toolbar, pill) is a dark "ink"
-workspace on purpose, so the one thing that has to stay print-true, the
-white resume page itself, reads like an actual sheet of paper resting
-under a desk lamp rather than just another panel in a row of identical
-cards. The small input fields in the editor are styled as pale index
-cards sitting on that dark desk, a smaller echo of the same idea. Brass is
-the one accent color that means "action" (Export, the active pill state).
-A separate muted red ("stamp") is reserved for anything AI-related, so the
-two never get confused.
+piece of paper. The app chrome (editor, toolbar, pill) is a warm, light
+"paper and coffee" workspace, rounded corners throughout, so the one thing
+that has to stay print-true, the white resume page itself, still reads as
+an actual sheet of paper resting on the desk rather than just another
+panel in a row of identical cards. The small input fields in the editor
+are styled as pale index cards sitting on that desk, a smaller echo of the
+same idea. A warm coffee-brown ("brass" in the code, a holdover name from
+an earlier direction) is the one accent color that means "action" (Export,
+the active pill state). A separate muted red ("stamp") is reserved for
+anything AI-related, so the two never get confused.
 
 Chrome typography is Georgia for headings (a real, characterful serif
 that's installed everywhere, unlike a webfont) and the system UI font for
@@ -188,6 +189,18 @@ as a bottom sheet, rather than duplicating those buttons in two places.
 
 ## Known limitations / things to check before you rely on it
 
+- **This round's changes**: reverted the app icon back to the original
+  navy-background/white-"CV" design (regenerated from scratch - I don't
+  have a stored copy of the original file, so this is a recreation, close
+  but not guaranteed pixel-identical to the very first version). Re-themed
+  the whole app chrome from the dark-ink palette to a light, warm,
+  rounded-corner "paper and coffee" look (all via the existing CSS
+  variable tokens, so this was a values-only change, not a rewrite of
+  every rule). Fixed a real button-sizing bug: the AI Assist gear icon in
+  the desktop topbar had no explicit height, so it rendered visibly
+  shorter than the New/Backup/Restore/PDF/Word buttons beside it (an
+  auto-height icon button next to fixed-padding text buttons) - all
+  topbar buttons now share an explicit height.
 - **I still could not test this in an actual browser.** This sandbox has
   no browser and no network access to the CDNs or to Groq's API. I
   verified the docx@8.5.0 and jsPDF 2.5.1 URLs and their exported globals

@@ -1,60 +1,67 @@
 /* =========================================================================
    DISPATCH — a CV builder
-   Design direction: a correspondence desk, not a SaaS dashboard. The app
-   chrome is deliberately dark (an "ink" workspace) so the one thing that
-   must stay print-true — the white resume page itself — reads like an
-   actual sheet of paper resting under a desk lamp, not just another panel
-   in a row of identical cards. Small pale "index card" fields carry the
-   same paper idea into the editor at a smaller scale. Brass is the one
-   accent color that means "action"; the muted stamp-red is reserved
-   strictly for the AI-assist affordance, so it never competes with brass.
+   Design direction: a correspondence desk, not a SaaS dashboard - warm,
+   light, rounded, paper-and-coffee rather than a dark control panel. The
+   white resume page itself still needs to read as an actual sheet of paper
+   resting on a warm wooden desk. Small pale "index card" fields carry the
+   same paper idea into the editor at a smaller scale. A warm coffee-brown
+   is the one accent color that means "action"; the muted stamp-red is
+   reserved strictly for the AI-assist affordance, so it never competes
+   with the main accent.
+   Note on token names: the --ink-*/--mist-* names are a holdover from an
+   earlier dark-chrome version of this theme. Renaming every one of ~150
+   usages across this file to a light-theme-appropriate name would be a
+   large, error-prone find/replace for zero functional benefit, since the
+   tokens are already centralized here - so only the *values* changed below
+   to the light-brown palette; the names stayed put on purpose.
    ========================================================================= */
 
 :root {
-  /* Chrome (app UI, never exported/printed) */
-  --ink-950: #14171c;
-  --ink-900: #1b1f26;
-  --ink-850: #1e232b;
-  --ink-800: #242a33;
-  --ink-700: #2d3440;
-  --line-dark: rgba(237, 233, 221, 0.1);
-  --line-dark-strong: rgba(237, 233, 221, 0.18);
-  --mist: #a7aeb9;
-  --mist-dim: #767e8a;
-  --mist-bright: #ece7da;
+  /* Chrome (app UI, never exported/printed) - light, warm, paper-toned */
+  --ink-950: #f8efe1;      /* page background - lightest cream */
+  --ink-900: #f1e2c8;      /* topbar / panel background */
+  --ink-850: #ecd9b8;      /* deeper panel, e.g. settings drawer */
+  --ink-800: #e4cda2;      /* resting button/badge background */
+  --ink-700: #d8ba82;      /* hover state on the above */
+  --line-dark: rgba(94, 62, 25, 0.16);
+  --line-dark-strong: rgba(94, 62, 25, 0.3);
+  --mist: #7a5a35;         /* secondary text */
+  --mist-dim: #96754c;     /* tertiary/placeholder text */
+  --mist-bright: #2e1f10;  /* primary text - dark brown, near-black */
 
   /* Paper (index-card fields — a smaller echo of the resume page) */
-  --paper-card: #f2efe6;
-  --paper-card-text: #211e19;
-  --paper-card-border: rgba(20, 18, 12, 0.14);
+  --paper-card: #fffaf0;
+  --paper-card-text: #2e1f10;
+  --paper-card-border: rgba(94, 62, 25, 0.2);
 
   /* The resume document itself — must stay print-true regardless of theme */
   --paper: #ffffff;
   --ink-doc: #17181c;
 
   /* Accents */
-  --brass: #c9a227;
-  --brass-bright: #e2bf52;
-  --brass-dim: #8a6f22;
-  --stamp: #b3453f;
-  --stamp-bright: #d1655f;
-  --ok: #5fa87d;
-  --warn-bg: #3a2e18;
-  --warn-text: #e8b565;
-  --ok-bg: #163326;
-  --danger: #e0716c;
+  --brass: #8b5a2b;
+  --brass-bright: #a5713c;
+  --brass-dim: #6b4520;
+  --brass-ink: #fff6e9;    /* text/icon color when sitting on top of --brass */
+  --stamp: #a8433d;
+  --stamp-bright: #c14840;
+  --ok: #3f7a55;
+  --warn-bg: #f7e4c2;
+  --warn-text: #7a4a12;
+  --ok-bg: #dcefe1;
+  --danger: #b3413c;
 
-  --radius-sm: 4px;
-  --radius-md: 10px;
+  --radius-sm: 8px;
+  --radius-md: 16px;
   --radius-pill: 999px;
 
   --font-display: Georgia, "Times New Roman", serif;
   --font-ui: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   --font-mono: "Courier New", Courier, monospace;
 
-  --shadow-paper: 0 30px 70px -18px rgba(0, 0, 0, 0.6), 0 6px 16px rgba(0, 0, 0, 0.35);
-  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.3);
-  --shadow-sheet: 0 -10px 34px rgba(0, 0, 0, 0.5);
+  --shadow-paper: 0 24px 60px -18px rgba(60, 40, 20, 0.28), 0 6px 16px rgba(60, 40, 20, 0.16);
+  --shadow-card: 0 1px 3px rgba(60, 40, 20, 0.14);
+  --shadow-sheet: 0 -10px 30px rgba(60, 40, 20, 0.22);
 }
 
 * { box-sizing: border-box; }
@@ -180,6 +187,7 @@ a { color: var(--brass-bright); }
   border-radius: var(--radius-sm);
   font-size: 13px;
   line-height: 1.2;
+  height: 36px;
   flex-shrink: 0;
   white-space: nowrap;
 }
@@ -189,7 +197,7 @@ a { color: var(--brass-bright); }
 .btn-primary {
   background: var(--brass);
   border-color: var(--brass);
-  color: #201a05;
+  color: var(--brass-ink);
   font-weight: 600;
 }
 
@@ -197,6 +205,7 @@ a { color: var(--brass-bright); }
 
 .btn.icon-only {
   width: 34px;
+  height: 36px;
   padding: 0;
   font-size: 15px;
   display: flex;
@@ -233,7 +242,7 @@ a { color: var(--brass-bright); }
   justify-content: center;
   align-items: flex-start;
   background:
-    radial-gradient(ellipse at top, rgba(255,255,255,0.03), transparent 60%),
+    radial-gradient(ellipse at top, rgba(255, 250, 240, 0.7), transparent 60%),
     var(--ink-950);
 }
 
@@ -371,7 +380,7 @@ a { color: var(--brass-bright); }
   border-radius: var(--radius-pill);
 }
 
-.pill-seg.active { color: #201a05; }
+.pill-seg.active { color: var(--brass-ink); }
 
 .pill-more {
   border: none;
@@ -602,7 +611,7 @@ a { color: var(--brass-bright); }
 
 .icon-btn:hover { background: var(--ink-700); color: var(--mist-bright); }
 
-.icon-btn.danger:hover { background: #3a1f1d; color: var(--danger); border-color: var(--danger); }
+.icon-btn.danger:hover { background: #f8e2df; color: var(--danger); border-color: var(--danger); }
 
 .add-btn {
   font-size: 12.5px;
@@ -642,7 +651,7 @@ a { color: var(--brass-bright); }
   white-space: nowrap;
 }
 
-.ai-btn:hover { background: #2b2415; border-color: var(--brass); }
+.ai-btn:hover { background: #f3e6d2; border-color: var(--brass); }
 
 .ai-btn:disabled { opacity: 0.55; cursor: wait; }
 
