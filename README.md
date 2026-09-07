@@ -189,21 +189,31 @@ as a bottom sheet, rather than duplicating those buttons in two places.
 
 ## Known limitations / things to check before you rely on it
 
-- **This round**: the light-brown re-theme from last time was too pale —
-  the page background, topbar, and button backgrounds were all within a
-  few percent lightness of each other and of white, so nothing had a
-  visible edge, no border-radius was perceivable (there's no shape to see
-  rounding on if the fill barely differs from what's behind it), and the
-  whole thing read as washed-out white rather than brown. This pass uses
-  real contrast: a clearly tan desk, white/cream cards sitting on top of
-  it, and a genuinely brown accent instead of a pale one. Confirmed via
-  the markup that styles.css is actually loading (the "Dispatch" title has
-  no inline style, so its italic serif rendering can only come from the
-  stylesheet) — so this was a color-choice problem, not a loading one.
-  If it still looks unstyled after this, hard-refresh or clear site data
-  first (this app has a service worker for offline support, and a stale
-  cached copy from a previous version is worth ruling out before assuming
-  the code itself is still wrong).
+- **The actual root cause of several rounds of "nothing changed"**: the
+  service worker was cache-first, and this app's files change on every
+  deploy during active development, a combination that's known to cause
+  exactly this problem. Bumping CACHE_NAME wasn't enough on its own,
+  because the fetch the service worker makes to refresh its own cache
+  could still get served a stale response by the browser's own HTTP
+  cache if the host sends long-lived cache headers on static files
+  (common on Vercel by default). Rewrote it network-first: it now always
+  tries the network first and only falls back to a cached copy if that
+  request genuinely fails (i.e. you're offline), which is the one
+  situation a cache should apply to. Online users should now always get
+  the current deploy, never a stale one.
+  If you've already got an old service worker stuck in a tab or an
+  incognito session from before this fix, it needs to be cleared once,
+  after that this shouldn't come up again: DevTools (F12) → Application
+  tab → Service Workers (left sidebar) → Unregister → hard refresh
+  (Ctrl+Shift+R). That's more reliable than incognito, since incognito
+  only gets a clean slate if every incognito window is fully closed
+  first, not just the tab.
+- I still could not test this in an actual browser. This sandbox has no
+  browser and no network access to the CDNs or to Groq's API. Everything
+  above is reasoned through from how service workers and HTTP caching are
+  specified to behave, and confirmed against your actual reported
+  symptoms (styles.css containing the new color on direct fetch, while
+  the rendered page didn't reflect it), not observed directly by me.
 - **I still could not test this in an actual browser.** This sandbox has
   no browser and no network access to the CDNs or to Groq's API. I
   verified the docx@8.5.0 and jsPDF 2.5.1 URLs and their exported globals
