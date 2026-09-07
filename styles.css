@@ -17,38 +17,40 @@
    ========================================================================= */
 
 :root {
-  /* Chrome (app UI, never exported/printed) - light, warm, paper-toned.
-     First pass at this palette was too pale (#f8efe1/#f1e2c8/#e4cda2 all
-     sit within a few percent lightness of each other and of white), so
-     nothing had a visible edge and the whole app read as washed-out white
-     rather than brown. This pass uses real saturation and real contrast
-     between layers: a clearly tan desk, white/cream cards sitting on top
-     of it (so their rounded corners actually have an edge to show), and a
-     genuinely brown accent rather than a pale one. */
-  --ink-950: #e8d3ab;      /* page/desk background - a real tan, not near-white */
-  --ink-900: #dcbf88;      /* topbar background - a step deeper than the page */
-  --ink-850: #d2b073;      /* deeper panel, e.g. settings drawer */
-  --ink-800: #fbf5e9;      /* button/card resting background - light cream, sits clearly on top of the tan */
-  --ink-700: #f1e6cd;      /* hover state on the above */
-  --line-dark: rgba(74, 46, 16, 0.28);
-  --line-dark-strong: rgba(74, 46, 16, 0.42);
+  /* Chrome (app UI, never exported/printed) - warm, rounded, paper-and-coffee.
+     Second pass, on top of the light-brown pass below: the previous version
+     read as "cheap" mainly because of flat 1px borders with no shadow depth
+     and a small, timid radius scale, not because the hue was wrong - so this
+     pass keeps the same layered tan-desk/cream-card structure but (1) pushes
+     the radius scale up a lot (pill-shaped buttons, big soft card corners),
+     (2) replaces flat borders with real soft shadows for a tactile, slightly
+     raised feel, and (3) deepens/desaturates the accent into a genuine
+     coffee-brown rather than a lighter "brass" tone, while keeping every
+     layer's contrast checked against WCAG so nothing gets harder to read. */
+  --ink-950: #e2c99c;      /* page/desk background - a real tan, not near-white */
+  --ink-900: #d8bd8c;      /* topbar background - a step deeper than the page */
+  --ink-850: #c7a468;      /* deeper panel, e.g. settings drawer */
+  --ink-800: #fffaf0;      /* button/card resting background - warm cream, sits clearly on top of the tan */
+  --ink-700: #f5e9cd;      /* hover state on the above */
+  --line-dark: rgba(58, 34, 10, 0.22);
+  --line-dark-strong: rgba(58, 34, 10, 0.36);
   --mist: #5c3d1a;         /* secondary text */
-  --mist-dim: #8a6a3f;     /* tertiary/placeholder text */
-  --mist-bright: #2a1a09;  /* primary text - dark brown, near-black */
+  --mist-dim: #6b4a22;     /* tertiary/placeholder text - darkened from the first pass, which was too close in lightness to the tan chrome behind it to clear 4.5:1 */
+  --mist-bright: #2a1608;  /* primary text - dark coffee brown, near-black */
 
   /* Paper (index-card fields — a smaller echo of the resume page) */
-  --paper-card: #ffffff;
-  --paper-card-text: #2a1a09;
-  --paper-card-border: rgba(74, 46, 16, 0.3);
+  --paper-card: #fffdf8;
+  --paper-card-text: #2a1608;
+  --paper-card-border: rgba(58, 34, 10, 0.2);
 
   /* The resume document itself — must stay print-true regardless of theme */
   --paper: #ffffff;
   --ink-doc: #17181c;
 
-  /* Accents */
-  --brass: #7a4a1e;
-  --brass-bright: #96601f;
-  --brass-dim: #5c3814;
+  /* Accents - a genuine coffee-brown rather than a lighter "brass" */
+  --brass: #6b3e17;
+  --brass-bright: #8f5726;
+  --brass-dim: #4a2a0f;
   --brass-ink: #fff8ee;    /* text/icon color when sitting on top of --brass */
   --stamp: #a8382f;
   --stamp-bright: #c14840;
@@ -58,17 +60,19 @@
   --ok-bg: #cfe8d6;
   --danger: #a8382f;
 
-  --radius-sm: 10px;
-  --radius-md: 18px;
+  --radius-sm: 12px;
+  --radius-md: 22px;
+  --radius-lg: 30px;
   --radius-pill: 999px;
 
   --font-display: Georgia, "Times New Roman", serif;
   --font-ui: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   --font-mono: "Courier New", Courier, monospace;
 
-  --shadow-paper: 0 24px 60px -18px rgba(60, 40, 20, 0.35), 0 6px 16px rgba(60, 40, 20, 0.2);
-  --shadow-card: 0 2px 6px rgba(60, 40, 20, 0.22);
-  --shadow-sheet: 0 -10px 30px rgba(60, 40, 20, 0.3);
+  --shadow-paper: 0 30px 70px -20px rgba(58, 34, 10, 0.4), 0 8px 20px rgba(58, 34, 10, 0.22);
+  --shadow-card: 0 1px 2px rgba(58, 34, 10, 0.07), 0 10px 26px -12px rgba(58, 34, 10, 0.32);
+  --shadow-raised: 0 3px 8px -2px rgba(58, 34, 10, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.35);
+  --shadow-sheet: 0 -16px 44px rgba(58, 34, 10, 0.35);
 }
 
 * { box-sizing: border-box; }
@@ -76,7 +80,7 @@
 html, body {
   margin: 0;
   height: 100%;
-  background: var(--ink-950);
+  background: radial-gradient(ellipse 1200px 700px at 50% -10%, #f0dcb4, var(--ink-950) 65%);
   color: var(--mist-bright);
   font-family: var(--font-ui);
 }
@@ -187,37 +191,43 @@ a { color: var(--brass-bright); }
 }
 
 .btn {
-  border: 1px solid var(--line-dark-strong);
+  border: 1px solid var(--line-dark);
   background: var(--ink-800);
   color: var(--mist-bright);
-  padding: 8px 13px;
-  border-radius: var(--radius-sm);
+  padding: 8px 16px;
+  border-radius: var(--radius-pill);
   font-size: 13px;
+  font-weight: 600;
   line-height: 1.2;
-  height: 36px;
+  height: 40px;
   flex-shrink: 0;
   white-space: nowrap;
+  box-shadow: var(--shadow-raised);
+  transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
 }
 
-.btn:hover { background: var(--ink-700); border-color: var(--mist-dim); }
+.btn:hover { background: var(--ink-700); border-color: var(--mist-dim); transform: translateY(-1px); box-shadow: 0 6px 14px -4px rgba(58, 34, 10, 0.32), inset 0 1px 0 rgba(255, 255, 255, 0.4); }
+.btn:active { transform: translateY(0); box-shadow: var(--shadow-raised); }
 
 .btn-primary {
-  background: var(--brass);
-  border-color: var(--brass);
+  background: linear-gradient(180deg, var(--brass-bright), var(--brass));
+  border-color: var(--brass-dim);
   color: var(--brass-ink);
-  font-weight: 600;
+  font-weight: 700;
+  box-shadow: 0 4px 14px -4px rgba(58, 34, 10, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.2);
 }
 
-.btn-primary:hover { background: var(--brass-bright); }
+.btn-primary:hover { background: linear-gradient(180deg, var(--brass-bright), var(--brass-bright)); box-shadow: 0 8px 18px -4px rgba(58, 34, 10, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.25); }
 
 .btn.icon-only {
-  width: 34px;
-  height: 36px;
+  width: 40px;
+  height: 40px;
   padding: 0;
   font-size: 15px;
   display: flex;
   align-items: center;
   justify-content: center;
+  border-radius: 50%;
 }
 
 /* Hidden on desktop, where the gear stays a compact icon-only button to
@@ -269,8 +279,8 @@ a { color: var(--brass-bright); }
     align-items: stretch;
     gap: 12px;
     padding: 16px 16px calc(16px + env(safe-area-inset-bottom));
-    border-top-left-radius: 18px;
-    border-top-right-radius: 18px;
+    border-top-left-radius: var(--radius-lg);
+    border-top-right-radius: var(--radius-lg);
     border-bottom: none;
     box-shadow: var(--shadow-sheet);
     transform: translateY(110%);
@@ -332,7 +342,7 @@ a { color: var(--brass-bright); }
   border: 1px solid var(--line-dark-strong);
   border-radius: var(--radius-pill);
   padding: 4px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 10px 30px rgba(58, 34, 10, 0.45);
 }
 
 @media (max-width: 860px) {
@@ -425,6 +435,9 @@ a { color: var(--brass-bright); }
   width: min(380px, 92vw);
   background: var(--ink-900);
   border-left: 1px solid var(--line-dark);
+  border-top-left-radius: var(--radius-lg);
+  border-bottom-left-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sheet);
   padding: 26px;
   overflow-y: auto;
   z-index: 65; /* above the mobile topbar-as-sheet (z-index 60), so opening
@@ -493,8 +506,9 @@ a { color: var(--brass-bright); }
 .section-card {
   background: var(--ink-800);
   border: 1px solid var(--line-dark);
-  border-radius: var(--radius-md);
-  margin-bottom: 14px;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+  margin-bottom: 18px;
 }
 
 .section-card > .section-head {
@@ -547,18 +561,20 @@ a { color: var(--brass-bright); }
 .field textarea,
 .field select {
   width: 100%;
-  padding: 8px 10px;
+  padding: 9px 12px;
   border: 1px solid var(--paper-card-border);
   border-radius: var(--radius-sm);
   font-size: 13px;
   font-family: inherit;
   background: var(--paper-card);
   color: var(--paper-card-text);
-  box-shadow: var(--shadow-card);
+  box-shadow: 0 1px 2px rgba(58, 34, 10, 0.08);
+  transition: box-shadow 0.15s ease, border-color 0.15s ease;
 }
 
 .field input:focus, .field textarea:focus, .field select:focus {
   border-color: var(--brass);
+  box-shadow: 0 0 0 3px rgba(107, 62, 23, 0.16);
 }
 
 .field textarea { resize: vertical; min-height: 58px; }
@@ -572,8 +588,9 @@ a { color: var(--brass-bright); }
 .entry {
   border: 1px solid var(--line-dark);
   border-radius: var(--radius-md);
-  padding: 13px;
-  margin-bottom: 10px;
+  box-shadow: 0 1px 2px rgba(58, 34, 10, 0.08);
+  padding: 14px;
+  margin-bottom: 12px;
   background: var(--ink-850);
 }
 
@@ -604,42 +621,47 @@ a { color: var(--brass-bright); }
 }
 
 .icon-btn {
-  border: 1px solid var(--line-dark-strong);
+  border: 1px solid var(--line-dark);
   background: var(--ink-800);
-  border-radius: 4px;
-  width: 27px;
-  height: 27px;
+  border-radius: 50%;
+  width: 30px;
+  height: 30px;
   font-size: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
   color: var(--mist);
+  box-shadow: 0 1px 2px rgba(58, 34, 10, 0.12);
+  transition: transform 0.15s ease, background 0.15s ease, color 0.15s ease;
 }
 
-.icon-btn:hover { background: var(--ink-700); color: var(--mist-bright); }
+.icon-btn:hover { background: var(--ink-700); color: var(--mist-bright); transform: translateY(-1px); }
 
 .icon-btn.danger:hover { background: #f8e2df; color: var(--danger); border-color: var(--danger); }
 
 .add-btn {
   font-size: 12.5px;
-  border: 1px dashed var(--line-dark-strong);
+  font-weight: 600;
+  border: 1.5px dashed var(--line-dark-strong);
   background: none;
-  padding: 9px;
+  padding: 10px;
   width: 100%;
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-pill);
   color: var(--mist-dim);
+  transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
 }
 
-.add-btn:hover { border-color: var(--brass); color: var(--brass-bright); }
+.add-btn:hover { border-color: var(--brass); color: var(--brass-bright); background: var(--ink-700); }
 
 .suggest-btn {
   font-size: 11.5px;
-  border: 1px solid var(--line-dark-strong);
+  border: 1px solid var(--line-dark);
   background: var(--ink-800);
-  padding: 5px 9px;
-  border-radius: 4px;
+  padding: 6px 11px;
+  border-radius: var(--radius-pill);
   color: var(--mist);
   white-space: nowrap;
+  box-shadow: 0 1px 2px rgba(58, 34, 10, 0.1);
 }
 
 .suggest-btn:hover { background: var(--ink-700); }
@@ -652,10 +674,11 @@ a { color: var(--brass-bright); }
   font-size: 11.5px;
   border: 1px solid var(--brass-dim);
   background: var(--ink-800);
-  padding: 5px 9px;
-  border-radius: 4px;
+  padding: 6px 11px;
+  border-radius: var(--radius-pill);
   color: var(--brass-bright);
   white-space: nowrap;
+  box-shadow: 0 1px 2px rgba(58, 34, 10, 0.1);
 }
 
 .ai-btn:hover { background: #f3e6d2; border-color: var(--brass); }
@@ -700,9 +723,10 @@ a { color: var(--brass-bright); }
 
 .banner {
   font-size: 12.5px;
-  padding: 9px 13px;
-  border-radius: var(--radius-sm);
-  margin-bottom: 12px;
+  font-weight: 600;
+  padding: 10px 15px;
+  border-radius: var(--radius-pill);
+  margin-bottom: 14px;
 }
 
 .banner.warn { background: var(--warn-bg); color: var(--warn-text); }
